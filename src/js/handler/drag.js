@@ -1,12 +1,13 @@
 /**
  * @fileoverview Drag handler for calendar.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
 var util = require('tui-code-snippet');
 var domutil = require('../common/domutil');
 var domevent = require('../common/domevent');
+var config = require('../config');
 
 /**
  * @constructor
@@ -64,7 +65,7 @@ function Drag(options, container) {
 /**
  * Destroy method.
  */
-Drag.prototype.destroy = function() {
+Drag.prototype.destroy = function () {
     domevent.off(this.container, 'mousedown', this._onMouseDown, this);
     domevent.off(
         this.container,
@@ -79,7 +80,7 @@ Drag.prototype.destroy = function() {
 /**
  * Clear cache data for single dragging session.
  */
-Drag.prototype._clearData = function() {
+Drag.prototype._clearData = function () {
     this._cancelled = false;
     this._distance = 0;
     this._isMoved = false;
@@ -91,7 +92,7 @@ Drag.prototype._clearData = function() {
  * Toggle events for mouse dragging.
  * @param {boolean} toBind - bind events related with dragging when supplied "true"
  */
-Drag.prototype._toggleDragEvent = function(toBind) {
+Drag.prototype._toggleDragEvent = function (toBind) {
     var container = this.container,
         domMethod,
         method;
@@ -104,16 +105,12 @@ Drag.prototype._toggleDragEvent = function(toBind) {
         method = 'enable';
     }
 
-    domutil[method + 'TextSelection'](container);
-    domutil[method + 'ImageDrag'](container);
-    domevent[domMethod](
-        global.document,
-        {
-            mousemove: this._onMouseMove,
-            mouseup: this._onMouseUp
-        },
-        this
-    );
+    domutil[method + 'TextSelection'](container, preventDefaultWhenNotPopup);
+    domutil[method + 'ImageDrag'](container, preventDefaultWhenNotPopup);
+    domevent[domMethod](global.document, {
+        mousemove: this._onMouseMove,
+        mouseup: this._onMouseUp
+    }, this);
 };
 
 /**
@@ -121,9 +118,9 @@ Drag.prototype._toggleDragEvent = function(toBind) {
  * @param {MouseEvent} mouseEvent - mouse event object.
  * @returns {object} normalized mouse event data.
  */
-Drag.prototype._getEventData = function(mouseEvent) {
+Drag.prototype._getEventData = function (mouseEvent) {
     return {
-        target: mouseEvent.target || mouseEvent.srcElement,
+        target: domevent.getEventTarget(mouseEvent),
         originEvent: mouseEvent
     };
 };
@@ -132,9 +129,9 @@ Drag.prototype._getEventData = function(mouseEvent) {
  * MouseDown DOM event handler.
  * @param {MouseEvent} mouseDownEvent MouseDown event object.
  */
-Drag.prototype._onMouseDown = function(mouseDownEvent) {
+Drag.prototype._onMouseDown = function (mouseDownEvent) {
     var opt = this.options,
-        target = mouseDownEvent.srcElement || mouseDownEvent.target;
+        target = domevent.getEventTarget(mouseDownEvent);
 
     // only primary button can start drag.
     if (domevent.getMouseButton(mouseDownEvent) !== 0) {
@@ -168,7 +165,7 @@ Drag.prototype._onMouseDown = function(mouseDownEvent) {
  * @emits Drag#dragStart
  * @param {MouseEvent} mouseMoveEvent MouseMove event object.
  */
-Drag.prototype._onMouseMove = function(mouseMoveEvent) {
+Drag.prototype._onMouseMove = function (mouseMoveEvent) {
     var distance;
 
     if (this._cancelled) {
@@ -179,7 +176,7 @@ Drag.prototype._onMouseMove = function(mouseMoveEvent) {
 
     distance = this.options.distance;
     // prevent automatic scrolling.
-    domevent.preventDefault(mouseMoveEvent);
+    preventDefaultWhenNotPopup(mouseMoveEvent);
 
     if (this._distance < distance) {
         this._distance += 1;
@@ -222,7 +219,7 @@ Drag.prototype._onMouseMove = function(mouseMoveEvent) {
  * @emits Drag#dragEnd
  * @emits Drag#click
  */
-Drag.prototype._onMouseUp = function(mouseUpEvent) {
+Drag.prototype._onMouseUp = function (mouseUpEvent) {
     if (this._cancelled) {
         return;
     }
@@ -241,13 +238,13 @@ Drag.prototype._onMouseUp = function(mouseUpEvent) {
      */
         this.fire('dragEnd', this._getEventData(mouseUpEvent));
     } else {
-    /**
-     * Click events.
-     * @event Drag#click
-     * @type {MouseEvent}
-     * @property {HTMLElement} target - target element in this event.
-     * @property {MouseEvent} originEvent - original mouse event object.
-     */
+        /**
+         * Click events.
+         * @event Drag#click
+         * @type {MouseEvent}
+         * @property {HTMLElement} target - target element in this event.
+         * @property {MouseEvent} originEvent - original mouse event object.
+         */
         this.fire('click', this._getEventData(mouseUpEvent));
     }
 
@@ -260,11 +257,24 @@ Drag.prototype._onMouseUp = function(mouseUpEvent) {
  * @emits Drag#dragStart
  * @param {MouseEvent} mouseMoveEvent MouseMove event object.
  */
-Drag.prototype._onMouseMoveNotification = function(mouseMoveEvent) {
+Drag.prototype._onMouseMoveNotification = function (mouseMoveEvent) {
     if (!this._isMoved && !this._dragStartEventData) {
         this.fire('mousemove', this._getEventData(mouseMoveEvent));
     }
 };
+
+/**
+ * If the target is not a popup, it prevents the default.
+ * @method
+ * @param {MouseEvent} event - Mouse event object
+ */
+function preventDefaultWhenNotPopup(event) {
+    var popup = domutil.closest(event.target, config.classname('.popup'));
+
+    if (!popup) {
+        domevent.preventDefault(event);
+    }
+}
 
 util.CustomEvents.mixin(Drag);
 

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Utility module for array sort, binary search.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -249,8 +249,8 @@ function scheduleASC(a, b) {
         return startsCompare;
     }
 
-    durationA = a.duration().getTime();
-    durationB = b.duration().getTime();
+    durationA = a.duration();
+    durationB = b.duration();
 
     if (durationA < durationB) {
         return 1;
@@ -284,4 +284,3 @@ module.exports = {
         }
     }
 };
-

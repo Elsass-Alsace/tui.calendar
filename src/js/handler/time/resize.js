@@ -1,6 +1,6 @@
 /**
  * @fileoverview Handling resize schedules from drag handler and time grid view
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -9,6 +9,7 @@ var config = require('../../config');
 var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
 var TZDate = require('../../common/timezone').Date;
+var common = require('../../common/common');
 var timeCore = require('./core');
 var TimeResizeGuide = require('./resizeGuide');
 
@@ -196,6 +197,7 @@ TimeResize.prototype._updateSchedule = function(scheduleData) {
         dateEnd,
         newEnds,
         baseDate;
+    var changes;
 
     if (!schedule) {
         return;
@@ -205,25 +207,34 @@ TimeResize.prototype._updateSchedule = function(scheduleData) {
 
     baseDate = new TZDate(relatedView.getDate());
     dateEnd = datetime.end(baseDate);
-    newEnds = new TZDate(schedule.getEnds().getTime() + timeDiff);
+    newEnds = new TZDate(schedule.getEnds()).addMilliseconds(timeDiff);
 
     if (newEnds > dateEnd) {
-        newEnds = new TZDate(dateEnd.getTime());
+        newEnds = new TZDate(dateEnd);
     }
 
     if (newEnds.getTime() - schedule.getStarts().getTime() < datetime.millisecondsFrom('minutes', 30)) {
-        newEnds = new TZDate(schedule.getStarts().getTime() + datetime.millisecondsFrom('minutes', 30));
+        newEnds = new TZDate(schedule.getStarts()).addMinutes(30);
     }
+
+    changes = common.getScheduleChanges(
+        schedule,
+        ['end'],
+        {end: newEnds}
+    );
 
     /**
      * @event TimeResize#beforeUpdateSchedule
      * @type {object}
-     * @property {Schedule} schedule - schedule instance to update
-     * @property {Date} start - start time to update
-     * @property {Date} end - end time to update
+     * @property {Schedule} schedule - The original schedule instance
+     * @property {Date} start - Deprecated: start time to update
+     * @property {Date} end - Deprecated: end time to update
+     * @property {object} changes - end time to update
+     *  @property {date} end - end time to update
      */
     this.fire('beforeUpdateSchedule', {
         schedule: schedule,
+        changes: changes,
         start: schedule.getStarts(),
         end: newEnds
     });
@@ -255,12 +266,12 @@ TimeResize.prototype._onDragEnd = function(dragEndEventData) {
 
     scheduleData.range = [
         dragStart.timeY,
-        scheduleData.timeY + datetime.millisecondsFrom('hour', 0.5)
+        new TZDate(scheduleData.timeY).addMinutes(30)
     ];
 
     scheduleData.nearestRange = [
         dragStart.nearestGridTimeY,
-        scheduleData.nearestGridTimeY + datetime.millisecondsFrom('hour', 0.5)
+        scheduleData.nearestGridTimeY.addMinutes(30)
     ];
 
     this._updateSchedule(scheduleData);
@@ -305,4 +316,3 @@ timeCore.mixin(TimeResize);
 util.CustomEvents.mixin(TimeResize);
 
 module.exports = TimeResize;
-

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Handling move schedules from drag handler and time grid view
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -242,25 +242,32 @@ TimeMove.prototype._updateSchedule = function(scheduleData) {
     }
 
     timeDiff -= datetime.millisecondsFrom('minutes', 30);
-    newStarts = new TZDate(schedule.getStarts().getTime() + timeDiff);
-    newEnds = new TZDate(schedule.getEnds().getTime() + timeDiff);
+    newStarts = new TZDate(schedule.getStarts()).addMilliseconds(timeDiff);
+    newEnds = new TZDate(schedule.getEnds()).addMilliseconds(timeDiff);
 
     if (currentView) {
         dateDiff = currentView.getDate() - relatedView.getDate();
     }
 
-    newStarts = new TZDate(newStarts.getTime() + dateDiff);
-    newEnds = new TZDate(newEnds.getTime() + dateDiff);
+    newStarts.addMilliseconds(dateDiff);
+    newEnds.addMilliseconds(dateDiff);
 
     /**
      * @event TimeMove#beforeUpdateSchedule
      * @type {object}
-     * @property {Schedule} schedule - schedule instance to update
-     * @property {Date} start - start time to update
-     * @property {Date} end - end time to update
+     * @property {Schedule} schedule - The original schedule instance
+     * @property {Date} start - Deprecated: start time to update
+     * @property {Date} end - Deprecated: end time to update
+     * @property {object} changes - start and end time to update
+     *  @property {Date} start - start time to update
+     *  @property {Date} end - end time to update
      */
     this.fire('beforeUpdateSchedule', {
         schedule: schedule,
+        changes: {
+            start: newStarts,
+            end: newEnds
+        },
         start: newStarts,
         end: newEnds
     });
@@ -293,12 +300,12 @@ TimeMove.prototype._onDragEnd = function(dragEndEventData) {
 
     scheduleData.range = [
         dragStart.timeY,
-        scheduleData.timeY + datetime.millisecondsFrom('hour', 0.5)
+        new TZDate(scheduleData.timeY).addMinutes(30)
     ];
 
     scheduleData.nearestRange = [
         dragStart.nearestGridTimeY,
-        scheduleData.nearestGridTimeY + datetime.millisecondsFrom('hour', 0.5)
+        new TZDate(scheduleData.nearestGridTimeY).addMinutes(30)
     ];
 
     this._updateSchedule(scheduleData);
@@ -365,4 +372,3 @@ timeCore.mixin(TimeMove);
 util.CustomEvents.mixin(TimeMove);
 
 module.exports = TimeMove;
-

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Common collections.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -66,52 +66,6 @@ Collection.and = function(filters) {
 
         return true;
     };
-};
-
-/**
- * Combine multiple function filters with OR clause.
- * @param {...function} filters - function filters
- * @returns {function} combined filter
- */
-Collection.or = function(filters) {
-    var cnt;
-
-    filters = aps.call(arguments);
-    cnt = filters.length;
-
-    return function(item) {
-        var i = 1,
-            result = filters[0].call(null, item);
-
-        for (; i < cnt; i += 1) {
-            result = (result || filters[i].call(null, item));
-        }
-
-        return result;
-    };
-};
-
-/**
- * Merge several collections.
- *
- * You can\'t merge collections different _getScheduleID functions. Take case of use.
- * @param {...Collection} collections collection arguments to merge
- * @returns {Collection} merged collection.
- */
-Collection.merge = function(collections) {    // eslint-disable-line
-    var cols = aps.call(arguments),
-        newItems = {},
-        merged = new Collection(cols[0].getItemID),
-        extend = util.extend;
-
-    forEachArr(cols, function(col) {
-        extend(newItems, col.items);
-    });
-
-    merged.items = newItems;
-    merged.length = util.keys(merged.items).length;
-
-    return merged;
 };
 
 /**********
@@ -269,8 +223,6 @@ Collection.prototype.doWhenHas = function(id, fn, context) {
  * }
  *
  * collection.find(Collection.and(filter1, filter2));
- *
- * collection.find(Collection.or(filter1, filter2));
  */
 Collection.prototype.find = function(filter) {
     var result = new Collection();
@@ -440,4 +392,3 @@ Collection.prototype.toArray = function() {
 };
 
 module.exports = Collection;
-

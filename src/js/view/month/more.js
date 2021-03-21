@@ -1,10 +1,11 @@
 /**
  * @fileoverview Floating layer for displaying schedule in specific date
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
 var OUT_PADDING = 5;
+var VIEW_MIN_WIDTH = 280;
 var util = require('tui-code-snippet');
 var config = require('../../config'),
     domevent = require('../../common/domevent'),
@@ -69,7 +70,7 @@ util.inherit(More, View);
  * @param {MouseEvent} clickEvent - mouse event object
  */
 More.prototype._onClick = function(clickEvent) {
-    var target = (clickEvent.target || clickEvent.srcElement);
+    var target = domevent.getEventTarget(clickEvent);
     var className = config.classname('month-more-close');
 
     if (!domutil.hasClass(target, className) && !domutil.closest(target, '.' + className)) {
@@ -85,7 +86,7 @@ More.prototype._onClick = function(clickEvent) {
  * @param {MouseEvent} mouseDownEvent - mouse event object
  */
 More.prototype._onMouseDown = function(mouseDownEvent) {
-    var target = (mouseDownEvent.target || mouseDownEvent.srcElement),
+    var target = domevent.getEventTarget(mouseDownEvent),
         moreLayer = domutil.closest(target, config.classname('.month-more'));
 
     if (moreLayer) {
@@ -110,8 +111,8 @@ More.prototype._getRenderPosition = function(target, weekItem) {
     var left = pos[0] - OUT_PADDING;
     var top = pos[1] - OUT_PADDING;
 
-    left = common.ratio(containerSize[0], 100, left) + '%';
-    top = common.ratio(containerSize[1], 100, top) + '%';
+    left = common.ratio(containerSize[0], 100, left);
+    top = common.ratio(containerSize[1], 100, top);
 
     return [left, top];
 };
@@ -144,6 +145,13 @@ More.prototype.render = function(viewModel) {
     var styles = this._getStyles(this.theme);
     var maxVisibleSchedulesInLayer = 10;
     var height = '';
+    var containerSize = domutil.getSize(this.container);
+    var calWidth = 0;
+    var calHeight = 0;
+    var isOverWidth = false;
+    var isOverHeight = false;
+    var leftPos = pos[0];
+    var topPos = pos[1];
 
     this._viewModel = util.extend(viewModel, {
         scheduleGutter: opt.scheduleGutter,
@@ -153,6 +161,7 @@ More.prototype.render = function(viewModel) {
         styles: styles
     });
 
+    width = Math.max(width, VIEW_MIN_WIDTH);
     height = parseInt(styles.titleHeight, 10);
     height += parseInt(styles.titleMarginBottom, 10);
     if (viewModel.schedules.length <= maxVisibleSchedulesInLayer) {
@@ -176,14 +185,33 @@ More.prototype.render = function(viewModel) {
     }
 
     layer.setContent(tmpl(viewModel));
-    if (weekItem.parentElement.lastElementChild === weekItem) {
+
+    calWidth = leftPos * containerSize[0] / 100;
+    calHeight = topPos * containerSize[1] / 100;
+    isOverWidth = calWidth + width >= containerSize[0];
+    isOverHeight = calHeight + height >= containerSize[1];
+    leftPos = leftPos + '%';
+    topPos = topPos + '%';
+
+    if (isOverWidth && isOverHeight) {
         layer.setLTRB({
-            left: pos[0],
+            right: 0,
             bottom: 0
         });
+    } else if (!isOverWidth && isOverHeight) {
+        layer.setLTRB({
+            left: leftPos,
+            bottom: 0
+        });
+    } else if (isOverWidth && !isOverHeight) {
+        layer.setLTRB({
+            right: 0,
+            top: topPos
+        });
     } else {
-        layer.setPosition(pos[0], pos[1]);
+        layer.setPosition(leftPos, topPos);
     }
+
     layer.setSize(width, height);
 
     layer.show();
@@ -247,6 +275,7 @@ More.prototype._getStyles = function(theme) {
             listHeight += ' - ' + styles.titleMarginBottom;
         }
         listHeight += ')';
+
         styles.listHeight = listHeight;
     }
 

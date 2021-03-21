@@ -1,6 +1,6 @@
 /**
  * @fileoverview DayGrid in weekly view
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -87,6 +87,7 @@ DayGrid.prototype.getBaseViewModel = function(viewModel) {
         styles = this._getStyles(viewModel.theme, timezonesCollapsed);
 
     var baseViewModel, visibleScheduleCount;
+    var now = new TZDate().toLocalTime();
 
     if (panel.showExpandableButton) {
         if (!heightForcedSet) {
@@ -115,7 +116,7 @@ DayGrid.prototype.getBaseViewModel = function(viewModel) {
         days: util.map(viewModel.range, function(d, index) {
             var day = d.getDay();
             var ymd = datetime.format(d, 'YYYYMMDD');
-            var isToday = datetime.isSameDate(d, new TZDate());
+            var isToday = datetime.isSameDate(now, d);
 
             return {
                 day: day,

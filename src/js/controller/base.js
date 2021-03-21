@@ -1,6 +1,6 @@
 /**
  * @fileoverview Base calendar controller
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -10,6 +10,54 @@ var ScheduleViewModel = require('../model/viewModel/scheduleViewModel');
 var datetime = require('../common/datetime');
 var common = require('../common/common');
 var Theme = require('../theme/theme');
+var tz = require('../common/timezone');
+var TZDate = tz.Date;
+
+/**
+ * Get range date by custom timezone or native timezone
+ * @param {Schedule} schedule The instance of schedule.
+ * @returns {RangeDate} start and end date
+ */
+function getRangeDateByOffset(schedule) {
+    var scheduleStart = schedule.getStarts();
+    var scheduleEnd = schedule.getEnds();
+    var start = datetime.start(scheduleStart);
+    var equalStartEnd = datetime.compare(scheduleStart, scheduleEnd) === 0;
+    var endDate = equalStartEnd ? scheduleEnd : datetime.convertStartDayToLastDay(scheduleEnd);
+    var end = datetime.end(endDate);
+
+    var nativeOffsetMs = tz.getNativeOffsetMs();
+    var startOffset = scheduleStart.toDate().getTimezoneOffset();
+    var MIN_TO_MS = 60 * 1000;
+    var offsetDiffMs = 0;
+
+    var primaryTimezoneName = tz.getPrimaryTimezoneName();
+    var primaryOffset = tz.getPrimaryOffset();
+    var timezoneOffset = tz.getOffsetByTimezoneName(primaryTimezoneName, scheduleStart.getTime());
+
+    if (tz.isNativeOsUsingDSTTimezone() && nativeOffsetMs !== startOffset) {
+        // When using a custom time zone, the native time zone offset is fixed and rendered.
+        // So, The fixed and rendered time should be recalculated as the original time zone offset.
+        offsetDiffMs = (startOffset * MIN_TO_MS) - nativeOffsetMs;
+    }
+
+    if (tz.isPrimaryUsingDSTTimezone() && primaryOffset !== timezoneOffset) {
+        // The custom time zone is a time zone where two offsets including DST are applied.
+        // The first rendered schedule is calculated and drawn with the offset calculated at the access time(system OS local time).
+        // It should be recalculated with the original time zone offset.
+        offsetDiffMs = (primaryOffset - timezoneOffset) * MIN_TO_MS;
+    }
+
+    start = datetime.start(scheduleStart.getUTCTime() + offsetDiffMs);
+    end = datetime.end(
+        datetime.convertStartDayToLastDay(new TZDate(scheduleEnd.getUTCTime() + offsetDiffMs))
+    );
+
+    return {
+        start: start,
+        end: end
+    };
+}
 
 /**
  * @constructor
@@ -27,19 +75,24 @@ function Base(options) {
      * @param {ScheduleViewModel} viewModel - view model instance
      * @returns {string} group key
      */
-    this.groupFunc = options.groupFunc || function(viewModel) {
-        var model = viewModel.model;
+    this.groupFunc =
+        options.groupFunc ||
+        function(viewModel) {
+            var model = viewModel.model;
 
-        if (viewModel.model.isAllDay) {
-            return 'allday';
-        }
+            if (viewModel.model.isAllDay) {
+                return 'allday';
+            }
 
-        if (model.category === 'time' && (model.end - model.start > datetime.MILLISECONDS_PER_DAY)) {
-            return 'allday';
-        }
+            if (
+                model.category === 'time' &&
+                model.end - model.start > datetime.MILLISECONDS_PER_DAY
+            ) {
+                return 'allday';
+            }
 
-        return model.category;
-    };
+            return model.category;
+        };
 
     /**
      * schedules collection.
@@ -73,13 +126,21 @@ function Base(options) {
  * @returns {array} contain dates.
  */
 Base.prototype._getContainDatesInSchedule = function(schedule) {
-    var range = datetime.range(
-        datetime.start(schedule.getStarts()),
-        datetime.end(schedule.getEnds()),
-        datetime.MILLISECONDS_PER_DAY
-    );
+    var scheduleStart = schedule.getStarts();
+    var scheduleEnd = schedule.getEnds();
+    var start = datetime.start(scheduleStart);
+    var equalStartEnd = datetime.compare(scheduleStart, scheduleEnd) === 0;
+    var endDate = equalStartEnd ? scheduleEnd : datetime.convertStartDayToLastDay(scheduleEnd);
+    var end = datetime.end(endDate);
+    var rangeDateByOffset;
 
-    return range;
+    if (tz.hasPrimaryTimezoneCustomSetting()) {
+        rangeDateByOffset = getRangeDateByOffset(schedule);
+        start = rangeDateByOffset.start;
+        end = rangeDateByOffset.end;
+    }
+
+    return datetime.range(start, end, datetime.MILLISECONDS_PER_DAY);
 };
 
 /****************
@@ -87,7 +148,7 @@ Base.prototype._getContainDatesInSchedule = function(schedule) {
  ****************/
 
 /**
- * Create an schedule instance from raw data.
+ * Create a schedule instance from raw data.
  * @emits Base#beforeCreateSchedule
  * @emits Base#createdSchedule
  * @param {object} options Data object to create schedule.
@@ -137,17 +198,34 @@ Base.prototype.createSchedules = function(dataList, silent) {
 };
 
 /**
- * Update an schedule.
+ * Update a schedule.
  * @emits Base#updateSchedule
  * @param {Schedule} schedule - schedule instance to update
  * @param {object} options updated object data.
  * @returns {Schedule} updated schedule instance
  */
+// eslint-disable-next-line complexity
 Base.prototype.updateSchedule = function(schedule, options) {
     var start = options.start || schedule.start;
     var end = options.end || schedule.end;
 
     options = options || {};
+
+    if (['milestone', 'task', 'allday', 'time'].indexOf(options.category) > -1) {
+        schedule.set('category', options.category);
+    }
+
+    if (options.category === 'allday') {
+        options.isAllDay = true;
+    }
+
+    if (!util.isUndefined(options.isAllDay)) {
+        schedule.set('isAllDay', options.isAllDay);
+    }
+
+    if (!util.isUndefined(options.calendarId)) {
+        schedule.set('calendarId', options.calendarId);
+    }
 
     if (options.title) {
         schedule.set('title', options.title);
@@ -181,10 +259,6 @@ Base.prototype.updateSchedule = function(schedule, options) {
         schedule.set('origin', options.origin);
     }
 
-    if (!util.isUndefined(options.isAllDay)) {
-        schedule.set('isAllDay', options.isAllDay);
-    }
-
     if (!util.isUndefined(options.isPending)) {
         schedule.set('isPending', options.isPending);
     }
@@ -193,12 +267,24 @@ Base.prototype.updateSchedule = function(schedule, options) {
         schedule.set('isFocused', options.isFocused);
     }
 
+    if (!util.isUndefined(options.isReadOnly)) {
+        schedule.set('isReadOnly', options.isReadOnly);
+    }
+
     if (options.location) {
         schedule.set('location', options.location);
     }
 
     if (options.state) {
         schedule.set('state', options.state);
+    }
+
+    if (options.raw) {
+        schedule.set('raw', options.raw);
+    }
+
+    if (options.attendees) {
+        schedule.set('attendees', options.attendees);
     }
 
     this._removeFromMatrix(schedule);
@@ -234,7 +320,7 @@ Base.prototype._addToMatrix = function(schedule) {
 
     util.forEach(containDates, function(date) {
         var ymd = datetime.format(date, 'YYYYMMDD'),
-            matrix = ownMatrix[ymd] = ownMatrix[ymd] || [];
+            matrix = (ownMatrix[ymd] = ownMatrix[ymd] || []);
 
         matrix.push(util.stamp(schedule));
     });
@@ -247,17 +333,21 @@ Base.prototype._addToMatrix = function(schedule) {
 Base.prototype._removeFromMatrix = function(schedule) {
     var modelID = util.stamp(schedule);
 
-    util.forEach(this.dateMatrix, function(matrix) {
-        var index = util.inArray(modelID, matrix);
+    util.forEach(
+        this.dateMatrix,
+        function(matrix) {
+            var index = util.inArray(modelID, matrix);
 
-        if (~index) {
-            matrix.splice(index, 1);
-        }
-    }, this);
+            if (~index) {
+                matrix.splice(index, 1);
+            }
+        },
+        this
+    );
 };
 
 /**
- * Add an schedule instance.
+ * Add a schedule instance.
  * @emits Base#addedSchedule
  * @param {Schedule} schedule The instance of Schedule.
  * @param {boolean} silent - set true then don't fire events.
@@ -317,8 +407,8 @@ Base.prototype.splitScheduleByDateRange = function(start, end, scheduleCollectio
  * Return schedules in supplied date range.
  *
  * available only YMD.
- * @param {Date} start start date.
- * @param {Date} end end date.
+ * @param {TZDate} start start date.
+ * @param {TZDate} end end date.
  * @returns {object.<string, Collection>} schedule collection grouped by dates.
  */
 Base.prototype.findByDateRange = function(start, end) {
@@ -341,9 +431,12 @@ Base.prototype.findByDateRange = function(start, end) {
         viewModels = result[ymd] = common.createScheduleCollection();
 
         if (matrix && matrix.length) {
-            viewModels.add.apply(viewModels, util.map(matrix, function(id) {
-                return ScheduleViewModel.create(ownSchedules[id]);
-            }));
+            viewModels.add.apply(
+                viewModels,
+                util.map(matrix, function(id) {
+                    return ScheduleViewModel.create(ownSchedules[id]);
+                })
+            );
         }
     });
 
@@ -369,16 +462,6 @@ Base.prototype.clearSchedules = function() {
 Base.prototype.setTheme = function(theme) {
     return this.theme.setStyles(theme);
 };
-
-/**
- * @typedef {Calendar}
- * @property {string|number} id - calendar id
- * @property {string} name - calendar name
- * @property {string} color - text color when schedule is displayed
- * @property {string} bgColor - background color schedule is displayed
- * @property {string} borderColor - color of left border or bullet point when schedule is displayed
- * @property {boolean} [checked] - whether to show calendar's schedules or not
- */
 
 /**
  * Set calendar list

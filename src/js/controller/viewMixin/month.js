@@ -1,6 +1,6 @@
 /**
  * @fileoverview Controller mixin for Month View
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -44,8 +44,8 @@ var Month = {
      * Limit start, end for each allday schedules and expand start, end for
      * each time schedules
      * @this Base
-     * @param {Date} start - render start date
-     * @param {Date} end - render end date
+     * @param {TZDate} start - render start date
+     * @param {TZDate} end - render end date
      * @param {Collection} vColl - view model collection
      * property.
      */
@@ -159,11 +159,11 @@ var Month = {
             var start = model.getStarts();
             var end = model.getEnds();
 
-            viewModel.hasMultiDates = !datetime.isSameDate(start, end);
+            viewModel.hasMultiDates = datetime.hasMultiDates(start, end);
 
             if (!model.isAllDay && viewModel.hasMultiDates) {
                 viewModel.renderStarts = datetime.start(start);
-                viewModel.renderEnds = datetime.end(end);
+                viewModel.renderEnds = datetime.renderEnd(start, end);
             }
         });
     },
@@ -171,8 +171,8 @@ var Month = {
     /**
      * Find schedule and get view model for specific month
      * @this Base
-     * @param {Date} start - start date to find schedules
-     * @param {Date} end - end date to find schedules
+     * @param {TZDate} start - start date to find schedules
+     * @param {TZDate} end - end date to find schedules
      * @param {function[]} [andFilters] - optional filters to applying search query
      * @param {boolean} [alldayFirstMode=false] if true, time schedule is lower than all-day schedule. Or stack schedules from the top.
      * @returns {object} view model data
@@ -209,4 +209,3 @@ var Month = {
 };
 
 module.exports = Month;
-

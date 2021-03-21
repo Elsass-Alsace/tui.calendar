@@ -1,6 +1,6 @@
 /**
  * @fileoverview View of time.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -8,12 +8,53 @@ var util = require('tui-code-snippet');
 var config = require('../../config');
 var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
-var TZDate = require('../../common/timezone').Date;
 var View = require('../view');
 var timeTmpl = require('../template/week/time.hbs');
+var tz = require('../../common/timezone');
 
 var forEachArr = util.forEachArray;
 var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
+
+/**
+ * calculate offset start of schedule
+ * @param {ScheduleViewModel} viewModel - view model instance to calculate bound.
+ * @param {object} options - options for calculating schedule element's bound.
+ * @returns {object} - left and width
+ */
+function getOffsetStart(viewModel, options) {
+    var goingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration);
+    var startDayOffset = options.todayStart.toDate().getTimezoneOffset();
+    var nativeOffsetMs = tz.getNativeOffsetMs();
+    var startOffset = viewModel.valueOf().start.toDate().getTimezoneOffset();
+    var primaryOffset = tz.getPrimaryOffset();
+    var timezoneOffset = tz.getOffsetByTimezoneName(
+        tz.getPrimaryTimezoneName(),
+        viewModel.valueOf().start.getTime()
+    );
+    var MIN_TO_MS = 60 * 1000;
+    var offsetDiffMs = 0;
+    var offsetStart = viewModel.valueOf().start - goingDuration - options.todayStart;
+
+    if (tz.hasPrimaryTimezoneCustomSetting()) {
+        if (tz.isNativeOsUsingDSTTimezone() && nativeOffsetMs !== startDayOffset) {
+            // When using a custom time zone, the native time zone offset is fixed and rendered.
+            // So, The fixed and rendered time should be recalculated as the original time zone offset.
+            // The current system OS local time is not affected by summer/standard time and the schedule should always be displayed in the same location.
+            offsetDiffMs = (startOffset * MIN_TO_MS) - nativeOffsetMs;
+            offsetStart += offsetDiffMs;
+        }
+
+        if (tz.isPrimaryUsingDSTTimezone() && primaryOffset !== timezoneOffset) {
+            // The custom time zone is a time zone where two offsets including DST are applied.
+            // The first rendered schedule is calculated and drawn with the offset calculated at the access time(system OS local time).
+            // It should be recalculated with the original time zone offset.
+            offsetDiffMs = (primaryOffset - timezoneOffset) * MIN_TO_MS;
+            offsetStart += offsetDiffMs;
+        }
+    }
+
+    return offsetStart;
+}
 
 /**
  * @constructor
@@ -31,18 +72,21 @@ var SCHEDULE_MIN_DURATION = datetime.MILLISECONDS_SCHEDULE_MIN_DURATION;
 function Time(options, container, theme) {
     View.call(this, container);
 
-    this.options = util.extend({
-        index: 0,
-        width: 0,
-        ymd: '',
-        isToday: false,
-        pending: false,
-        hourStart: 0,
-        hourEnd: 24,
-        defaultMarginBottom: 2,
-        minHeight: 18.5,
-        isReadOnly: false
-    }, options);
+    this.options = util.extend(
+        {
+            index: 0,
+            width: 0,
+            ymd: '',
+            isToday: false,
+            pending: false,
+            hourStart: 0,
+            hourEnd: 24,
+            defaultMarginBottom: 2,
+            minHeight: 18.5,
+            isReadOnly: false
+        },
+        options
+    );
 
     this.timeTmpl = timeTmpl;
 
@@ -72,8 +116,11 @@ Time.prototype._parseDateGroup = function(str) {
     var y = parseInt(str.substr(0, 4), 10),
         m = parseInt(str.substr(4, 2), 10),
         d = parseInt(str.substr(6, 2), 10);
+    var date = datetime.start();
 
-    return new TZDate(y, m - 1, d);
+    date.setFullYear(y, m - 1, d);
+
+    return datetime.start(date);
 };
 
 /**
@@ -109,15 +156,13 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
     var croppedEnd = false;
     var goingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().goingDuration);
     var comingDuration = datetime.millisecondsFrom('minutes', viewModel.valueOf().comingDuration);
-    var offsetStart = viewModel.valueOf().start - goingDuration - options.todayStart;
+    var modelDuration = viewModel.duration();
+    var top, height, duration;
+    var goingDurationHeight, modelDurationHeight, comingDurationHeight;
+    var offsetStart = getOffsetStart(viewModel, options);
+
     // containerHeight : milliseconds in day = x : schedule's milliseconds
-    var top = (baseHeight * offsetStart) / baseMS;
-    var modelDuration = viewModel.duration().getTime();
-    var height;
-    var duration;
-    var goingDurationHeight;
-    var modelDurationHeight;
-    var comingDurationHeight;
+    top = (baseHeight * offsetStart) / baseMS;
 
     modelDuration = modelDuration > SCHEDULE_MIN_DURATION ? modelDuration : SCHEDULE_MIN_DURATION;
     duration = modelDuration + goingDuration + comingDuration;
@@ -129,7 +174,7 @@ Time.prototype._getScheduleViewBoundY = function(viewModel, options) {
 
     if (offsetStart < 0) {
         top = 0;
-        height += ((baseHeight * offsetStart) / baseMS);
+        height += (baseHeight * offsetStart) / baseMS;
         croppedStart = true;
     }
 
@@ -173,10 +218,14 @@ Time.prototype.getScheduleViewBound = function(viewModel, options) {
         travelBorderColor = null; // follow text color
     }
 
-    return util.extend({
-        isReadOnly: isReadOnly,
-        travelBorderColor: travelBorderColor
-    }, boundX, boundY);
+    return util.extend(
+        {
+            isReadOnly: isReadOnly,
+            travelBorderColor: travelBorderColor
+        },
+        boundX,
+        boundY
+    );
 };
 
 /**
@@ -201,17 +250,17 @@ Time.prototype._getBaseViewModel = function(ymd, matrices, containerHeight) {
     containerHeight = containerHeight || this.getViewBound().height;
     todayStart = this._parseDateGroup(ymd);
     todayStart.setHours(hourStart);
-    baseMS = datetime.millisecondsFrom('hour', (hourEnd - hourStart));
+    baseMS = datetime.millisecondsFrom('hour', hourEnd - hourStart);
 
     forEachArr(matrices, function(matrix) {
-        var maxRowLength,
-            widthPercent,
-            leftPercents,
-            i;
+        var maxRowLength, widthPercent, leftPercents, i;
 
-        maxRowLength = Math.max.apply(null, util.map(matrix, function(row) {
-            return row.length;
-        }));
+        maxRowLength = Math.max.apply(
+            null,
+            util.map(matrix, function(row) {
+                return row.length;
+            })
+        );
 
         widthPercent = 100 / maxRowLength;
 
@@ -261,7 +310,8 @@ Time.prototype.render = function(ymd, matrices, containerHeight) {
     this._getBaseViewModel(ymd, matrices, containerHeight);
     this.container.innerHTML = this.timeTmpl({
         matrices: matrices,
-        styles: this._getStyles(this.theme)
+        styles: this._getStyles(this.theme),
+        isReadOnly: this.options.isReadOnly
     });
 };
 

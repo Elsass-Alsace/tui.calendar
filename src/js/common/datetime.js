@@ -1,6 +1,6 @@
 /**
  * @fileoverview datetime utility module
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -69,8 +69,12 @@ tokenFunc = {
      * @returns {string} hh:mm
      */
     'hh:mm': function(date) {
-        var hour = Math.floor(date.getHours() % 12),
-            minutes = date.getMinutes();
+        var hour = date.getHours();
+        var minutes = date.getMinutes();
+
+        if (hour > 12) {
+            hour = hour % 12;
+        }
 
         return datetime.leadingZero(hour, 2) + ':' +
             datetime.leadingZero(minutes, 2);
@@ -179,21 +183,30 @@ datetime = {
     },
 
     /**
+     * Convert hours to minutes
+     * @param {number} hours - hours
+     * @returns {number} minutes
+     */
+    minutesFromHours: function(hours) {
+        return hours * 60;
+    },
+
+    /**
      * Make date array from supplied paramters.
      * @param {TZDate} start Start date.
      * @param {TZDate} end End date.
      * @param {number} step The number of milliseconds to use increment.
-     * @returns {array} Date array.
+     * @returns {TZDate[]} TZDate array.
      */
     range: function(start, end, step) {
         var startTime = start.getTime();
         var endTime = end.getTime();
         var cursor = startTime;
-        var date = dw(startTime);
+        var date = dw(new TZDate(start));
         var result = [];
 
         while (cursor <= endTime && endTime >= date.d.getTime()) {
-            result.push(new TZDate(date.d));
+            result.push(datetime.start(date.d));
             cursor = cursor + step;
             date.addDate(1);
         }
@@ -207,7 +220,7 @@ datetime = {
      * @returns {TZDate} Cloned date object
      */
     clone: function(date) {
-        return new TZDate(date.getTime());
+        return new TZDate(date);
     },
 
     /**
@@ -314,7 +327,7 @@ datetime = {
      *
      * @param {string} str Formatted string.
      * @param {number} [fixMonth=-1] - number for fix month calculating.
-     * @returns {(Date|boolean)} Converted Date object. when supplied str is not available then return false.
+     * @returns {(TZDate|boolean)} Converted Date object. when supplied str is not available then return false.
      */
     parse: function(str, fixMonth) {
         var separator,
@@ -347,13 +360,14 @@ datetime = {
             hms = [0, 0, 0];
         }
 
-        return new TZDate(
+        return new TZDate().setWithRaw(
             Number(ymd[0]),
             Number(ymd[1]) + fixMonth,
             Number(ymd[2]),
             Number(hms[0]),
             Number(hms[1]),
-            Number(hms[2])
+            Number(hms[2]),
+            0
         );
     },
 
@@ -376,11 +390,11 @@ datetime = {
 
     /**
      * Return 00:00:00 supplied date.
-     * @param {TZDate} date date.
+     * @param {TZDate} date date. if undefined, use now.
      * @returns {TZDate} start date.
      */
     start: function(date) {
-        var d = new TZDate(date.getTime());
+        var d = date ? new TZDate(date) : new TZDate();
         d.setHours(0, 0, 0, 0);
 
         return d;
@@ -388,11 +402,11 @@ datetime = {
 
     /**
      * Return 23:59:59 supplied date.
-     * @param {TZDate} date date.
+     * @param {TZDate} date date. if undefined, use now.
      * @returns {TZDate} end date.
      */
     end: function(date) {
-        var d = new TZDate(date.getTime());
+        var d = date ? new TZDate(date) : new TZDate();
         d.setHours(23, 59, 59, 0);
 
         return d;
@@ -426,7 +440,7 @@ datetime = {
      * @returns {TZDate} start date of supplied month
      */
     startDateOfMonth: function(date) {
-        var startDate = new TZDate(Number(date));
+        var startDate = new TZDate(date);
 
         startDate.setDate(1);
         startDate.setHours(0, 0, 0, 0);
@@ -460,7 +474,7 @@ datetime = {
      * @param {number} options.visibleWeeksCount visible weeks count
      * @param {boolean} options.workweek - only show work week
      * @param {function} [iteratee] - iteratee for customizing calendar object
-     * @returns {Array.<string[]>} calendar 2d array
+     * @returns {Array.<TZDate[]>} calendar 2d array
      */
     arr2dCalendar: function(month, options, iteratee) {
         var weekArr,
@@ -470,7 +484,7 @@ datetime = {
             cursor, week,
             calendar = [],
             startDayOfWeek = options.startDayOfWeek,
-            isAlways6Week = util.isUndefined(options.isAlways6Week) ? true : options.isAlways6Week,
+            isAlways6Week = util.isUndefined(options.isAlways6Week) || options.isAlways6Week,
             visibleWeeksCount = options.visibleWeeksCount,
             workweek = options.workweek;
 
@@ -498,7 +512,7 @@ datetime = {
         } else {
             totalDate = isAlways6Week ? (7 * 6) : (startIndex + end.getDate() + afterDates);
         }
-        cursor = new TZDate(new TZDate(start).setDate(start.getDate() - startIndex));
+        cursor = datetime.start(start).addDate(-startIndex);
         // iteratee all dates to render
         util.forEachArray(util.range(totalDate), function(i) {
             var date;
@@ -508,7 +522,7 @@ datetime = {
                 week = calendar[i / 7] = [];
             }
 
-            date = new TZDate(cursor);
+            date = datetime.start(cursor);
             date = iteratee ? iteratee(date) : date;
             if (!workweek || !datetime.isWeekend(date.getDay())) {
                 week.push(date);
@@ -571,8 +585,74 @@ datetime = {
      */
     isWeekend: function(day) {
         return day === 0 || day === 6;
+    },
+
+    /**
+     * Whether date is between supplied dates with date value?
+     * @param {TZDate} d - target date
+     * @param {TZDate} d1 - from date
+     * @param {TZDate} d2 - to date
+     * @returns {boolean} is between?
+     */
+    isBetweenWithDate: function(d, d1, d2) {
+        var format = 'YYYYMMDD';
+        d = parseInt(datetime.format(d, format), 10);
+        d1 = parseInt(datetime.format(d1, format), 10);
+        d2 = parseInt(datetime.format(d2, format), 10);
+
+        return d1 <= d && d <= d2;
+    },
+
+    isStartOfDay: function(d) {
+        return !datetime.compare(datetime.start(d), d);
+    },
+
+    convertStartDayToLastDay: function(d) {
+        var date = new TZDate(d);
+        if (datetime.isStartOfDay(d)) {
+            date.setDate(date.getDate() - 1);
+            date.setHours(23, 59, 59);
+        }
+
+        return date;
+    },
+
+    getStartOfNextDay: function(d) {
+        var date = datetime.start(d);
+        date.setHours(24);
+
+        return date;
+    },
+
+    getDateDifference: function(d1, d2) {
+        var time1 = new TZDate(d1.getFullYear(), d1.getMonth(), d1.getDate()).getTime();
+        var time2 = new TZDate(d2.getFullYear(), d2.getMonth(), d2.getDate()).getTime();
+
+        return Math.round((time1 - time2) / datetime.MILLISECONDS_PER_DAY);
+    },
+
+    getHourDifference: function(d1, d2) {
+        var time1 = new TZDate(d1).getTime();
+        var time2 = new TZDate(d2).getTime();
+
+        return Math.round((time1 - time2) / datetime.MILLISECONDS_PER_HOUR);
+    },
+
+    hasMultiDates: function(start, end) {
+        var diffDays = datetime.getDateDifference(start, end);
+        var diffHours = Math.abs(datetime.getHourDifference(start, end));
+        var withinDay = Math.abs(diffDays) === 1 && diffHours < 24 && datetime.isStartOfDay(end);
+
+        return !datetime.isSameDate(start, end) && !withinDay;
+    },
+
+    renderEnd: function(start, end) {
+        var diffDays = datetime.getDateDifference(start, end);
+
+        return Math.abs(diffDays) >= 1 && datetime.isStartOfDay(end) ?
+            datetime.convertStartDayToLastDay(end) :
+            datetime.end(end);
     }
 };
 
 module.exports = datetime;
-

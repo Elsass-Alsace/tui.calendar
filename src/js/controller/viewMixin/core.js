@@ -1,6 +1,6 @@
 /**
  * @fileoverview Core methods for schedule block placing
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -9,7 +9,8 @@ var forEachArr = util.forEachArray,
     aps = Array.prototype.slice;
 
 var datetime = require('../../common/datetime');
-var TZDate = require('../../common/timezone').Date;
+var tz = require('../../common/timezone');
+var TZDate = tz.Date;
 var Collection = require('../../common/collection');
 var ScheduleViewModel = require('../../model/viewModel/scheduleViewModel');
 
@@ -138,6 +139,13 @@ var Core = {
         return function(model) {
             var ownStarts = model.getStarts(),
                 ownEnds = model.getEnds();
+            var dateByOffset;
+
+            if (tz.hasPrimaryTimezoneCustomSetting()) {
+                dateByOffset = recalculateDateByOffset(ownStarts, ownEnds);
+                ownStarts = dateByOffset.start;
+                ownEnds = dateByOffset.end;
+            }
 
             // shorthand condition of
             //
@@ -168,19 +176,21 @@ var Core = {
         forEachArr(matrices, function(matrix) {
             forEachArr(matrix, function(column) {
                 forEachArr(column, function(viewModel, index) {
-                    var ymd, dateLength;
+                    var ymd, dateLength, startDate, endDate;
 
                     if (!viewModel) {
                         return;
                     }
 
-                    ymd = datetime.format(viewModel.getStarts(), 'YYYYMMDD');
+                    startDate = viewModel.getStarts();
+                    endDate = viewModel.getEnds();
                     dateLength = datetime.range(
-                        datetime.start(viewModel.getStarts()),
-                        datetime.end(viewModel.getEnds()),
+                        datetime.start(startDate),
+                        datetime.renderEnd(startDate, endDate),
                         datetime.MILLISECONDS_PER_DAY
                     ).length;
 
+                    ymd = datetime.format(startDate, 'YYYYMMDD');
                     viewModel.top = index;
                     viewModel.left = util.inArray(ymd, ymdListToRender);
                     viewModel.width = dateLength;
@@ -195,8 +205,8 @@ var Core = {
 
     /**
      * Limit start, end date each view model for render properly
-     * @param {Date} start - start date to render
-     * @param {Date} end - end date to render
+     * @param {TZDate} start - start date to render
+     * @param {TZDate} end - end date to render
      * @param {Collection|ScheduleViewModel} viewModelColl - schedule view
      *  model collection or ScheduleViewModel
      * @returns {ScheduleViewModel} return view model when third parameter is
@@ -211,12 +221,12 @@ var Core = {
         function limit(viewModel) {
             if (viewModel.getStarts() < start) {
                 viewModel.exceedLeft = true;
-                viewModel.renderStarts = new TZDate(start.getTime());
+                viewModel.renderStarts = new TZDate(start);
             }
 
             if (viewModel.getEnds() > end) {
                 viewModel.exceedRight = true;
-                viewModel.renderEnds = new TZDate(end.getTime());
+                viewModel.renderEnds = new TZDate(end);
             }
 
             return viewModel;
@@ -251,5 +261,39 @@ var Core = {
     }
 };
 
-module.exports = Core;
+/**
+ * Get range date by custom timezone or native timezone
+ * @param {TZDate} ownStarts start date.
+ * @param {TZDate} ownEnds end date.
+ * @returns {RangeDate} recalculated start and end date
+ */
+function recalculateDateByOffset(ownStarts, ownEnds) {
+    var nativeOffsetMs = tz.getNativeOffsetMs();
+    var startOffset = ownStarts.toDate().getTimezoneOffset();
+    var MIN_TO_MS = 60 * 1000;
+    var offsetDiffMs = 0;
 
+    var primaryTimezoneName = tz.getPrimaryTimezoneName();
+    var primaryOffset = tz.getPrimaryOffset();
+    var timezoneOffset = tz.getOffsetByTimezoneName(primaryTimezoneName, ownStarts.getTime());
+
+    if (tz.isNativeOsUsingDSTTimezone() && nativeOffsetMs !== startOffset) {
+        // When using a custom time zone, the native time zone offset is fixed and rendered.
+        // So, The fixed and rendered time should be recalculated as the original time zone offset.
+        offsetDiffMs = (startOffset * MIN_TO_MS) - nativeOffsetMs;
+    }
+
+    if (tz.isPrimaryUsingDSTTimezone() && primaryOffset !== timezoneOffset) {
+        // The custom time zone is a time zone where two offsets including DST are applied.
+        // The first rendered schedule is calculated and drawn with the offset calculated at the access time(system OS local time).
+        // It should be recalculated with the original time zone offset.
+        offsetDiffMs = (primaryOffset - timezoneOffset) * MIN_TO_MS;
+    }
+
+    return {
+        start: new TZDate(ownStarts.getUTCTime() + offsetDiffMs),
+        end: new TZDate(ownEnds.getUTCTime() + offsetDiffMs)
+    };
+}
+
+module.exports = Core;

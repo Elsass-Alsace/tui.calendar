@@ -1,6 +1,7 @@
 /*eslint-disable*/
 var TimeGrid = require('view/week/timeGrid');
 var timezone = require('common/timezone');
+var TZDate = timezone.Date;
 
 describe('View/TimeGrid', function() {
     var proto;
@@ -34,7 +35,7 @@ describe('View/TimeGrid', function() {
             options: {
                 hourStart: 3,
                 hourEnd: 11,
-                renderEndDate: '2018-05-23',
+                renderEndDate: new TZDate('2018-05-23'),
                 showTimezoneCollapseButton: false,
                 timezonesCollapsed: false
             },
@@ -101,6 +102,7 @@ describe('View/TimeGrid', function() {
 
         afterEach(function() {
             timezone.restoreOffset();
+            timezone.resetCustomSetting();
         });
 
         it ('get view model with timezone option', function() {
@@ -142,7 +144,9 @@ describe('View/TimeGrid', function() {
                 width: width,
                 left: 1 * width,
                 isPrimary: true,
-                hourmarkerText: '09:00',
+                hourmarker: new TZDate(2018, 4, 30, 9),
+                dateDifferenceSign: '+',
+                dateDifference: 0,
                 backgroundColor: '',
                 hidden: false
             }, {
@@ -179,7 +183,9 @@ describe('View/TimeGrid', function() {
                 width: width,
                 left: 0 * width,
                 isPrimary: false,
-                hourmarkerText: '[-1]<br>14:30',
+                hourmarker: new TZDate(2018, 4, 29, 14, 30),
+                dateDifferenceSign: '-',
+                dateDifference: 1,
                 backgroundColor: '',
                 hidden: false
             }];
@@ -188,7 +194,7 @@ describe('View/TimeGrid', function() {
                 options: {
                     hourStart: 0,
                     hourEnd: 24,
-                    renderEndDate: '2018-05-23',
+                    renderEndDate: new TZDate('2018-05-23'),
                     timezones: [
                         {
                             timezoneOffset: 540,

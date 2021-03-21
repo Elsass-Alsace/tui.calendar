@@ -1,6 +1,6 @@
 /**
  * @fileoverview Handling creation events from drag handler and time grid view
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -10,6 +10,7 @@ var array = require('../../common/array');
 var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
 var domevent = require('../../common/domevent');
+var common = require('../../common/common');
 var TimeCreationGuide = require('./creationGuide');
 var TZDate = require('../../common/timezone').Date;
 var timeCore = require('./core');
@@ -214,7 +215,9 @@ TimeCreation.prototype._createSchedule = function(eventData) {
     var relatedView = eventData.relatedView,
         createRange = eventData.createRange,
         nearestGridTimeY = eventData.nearestGridTimeY,
-        nearestGridEndTimeY = eventData.nearestGridEndTimeY ? eventData.nearestGridEndTimeY : nearestGridTimeY + datetime.millisecondsFrom('minutes', 30),
+        nearestGridEndTimeY = eventData.nearestGridEndTimeY
+            ? eventData.nearestGridEndTimeY
+            : new TZDate(nearestGridTimeY).addMinutes(30),
         baseDate,
         dateStart,
         dateEnd,
@@ -230,9 +233,9 @@ TimeCreation.prototype._createSchedule = function(eventData) {
 
     baseDate = new TZDate(relatedView.getDate());
     dateStart = datetime.start(baseDate);
-    dateEnd = datetime.end(baseDate);
-    start = Math.max(dateStart.getTime(), createRange[0]);
-    end = Math.min(dateEnd.getTime(), createRange[1]);
+    dateEnd = datetime.getStartOfNextDay(baseDate);
+    start = common.limitDate(createRange[0], dateStart, dateEnd);
+    end = common.limitDate(createRange[1], dateStart, dateEnd);
 
     /**
      * @event TimeCreation#beforeCreateSchedule
@@ -275,7 +278,7 @@ TimeCreation.prototype._onDragEnd = function(dragEndEventData) {
             dragStart.nearestGridTimeY,
             eventData.nearestGridTimeY
         ].sort(array.compare.num.asc);
-        range[1] += datetime.millisecondsFrom('hour', 0.5);
+        range[1].addMinutes(30);
 
         eventData.createRange = range;
 
@@ -361,12 +364,12 @@ TimeCreation.prototype._onDblClick = function(e) {
 TimeCreation.prototype.invokeCreationClick = function(schedule) {
     var opt = this.timeGridView.options,
         range = datetime.range(
-            datetime.parse(opt.renderStartDate),
-            datetime.parse(opt.renderEndDate),
+            opt.renderStartDate,
+            opt.renderEndDate,
             datetime.MILLISECONDS_PER_DAY),
         hourStart = opt.hourStart,
         targetDate = schedule.start;
-    var getScheduleDataFunc, eventData, timeView;
+    var eventData, timeView;
 
     util.forEach(range, function(date, index) {
         if (datetime.isSameDate(date, targetDate)) {
@@ -379,8 +382,7 @@ TimeCreation.prototype.invokeCreationClick = function(schedule) {
         timeView = this.timeGridView.children.toArray()[0];
     }
 
-    getScheduleDataFunc = this._retriveScheduleDataFromDate(timeView);
-    eventData = getScheduleDataFunc(schedule.start, schedule.end, hourStart);
+    eventData = this._retriveScheduleDataFromDate(timeView, schedule.start, schedule.end, hourStart);
 
     this.fire('timeCreationClick', eventData);
 

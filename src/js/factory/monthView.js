@@ -1,6 +1,6 @@
 /**
  * @fileoverview Month view factory module
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -31,7 +31,7 @@ var config = require('../config'),
 function getViewModelForMoreLayer(date, target, schedules, daynames) {
     schedules.each(function(schedule) {
         var model = schedule.model;
-        schedule.hasMultiDates = !datetime.isSameDate(model.start, model.end);
+        schedule.hasMultiDates = datetime.hasMultiDates(model.start, model.end);
     });
 
     return {
@@ -115,7 +115,7 @@ function createMonthView(baseController, layoutContainer, dragHandler, options) 
 
     // binding popup for schedules creation
     if (options.useCreationPopup) {
-        createView = new ScheduleCreationPopup(layoutContainer, baseController.calendars);
+        createView = new ScheduleCreationPopup(layoutContainer, baseController.calendars, options.usageStatistics);
 
         onSaveNewSchedule = function(scheduleData) {
             creationHandler.fire('beforeCreateSchedule', util.extend(scheduleData, {
@@ -257,4 +257,3 @@ function createMonthView(baseController, layoutContainer, dragHandler, options) 
 }
 
 module.exports = createMonthView;
-

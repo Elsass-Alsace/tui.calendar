@@ -33,7 +33,8 @@ function setConfig(defaultConfig, server) {
                 base: 'WebDriver',
                 config: webdriverConfig,
                 browserName: 'internet explorer',
-                version: '11'
+                version: '11',
+                platformName: 'windows'
             },
             'Edge': {
                 base: 'WebDriver',
@@ -60,10 +61,10 @@ function setConfig(defaultConfig, server) {
             'IE9',
             'IE10',
             'IE11',
-            'Edge',
+            // 'Edge',
             'Chrome-WebDriver',
-            'Firefox-WebDriver',
-            'Safari-WebDriver'
+            'Firefox-WebDriver'
+            // 'Safari-WebDriver'
         ];
         defaultConfig.concurrency = 1;
         defaultConfig.reporters.push('coverage');

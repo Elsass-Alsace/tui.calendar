@@ -1,6 +1,6 @@
 /**
  * @fileoverview Resize Guide module.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -9,7 +9,6 @@ var config = require('../../config');
 var domutil = require('../../common/domutil');
 var datetime = require('../../common/datetime');
 var reqAnimFrame = require('../../common/reqAnimFrame');
-var TZDate = require('../../common/timezone').Date;
 
 /**
  * @constructor
@@ -97,9 +96,9 @@ DayGridResizeGuide.prototype.refreshGuideElement = function(newWidth) {
 DayGridResizeGuide.prototype.getGuideElementWidthFunc = function(dragStartEventData) {
     var model = dragStartEventData.model,
         viewOptions = this.resizeHandler.view.options,
-        fromLeft = parseInt((new TZDate(
-            model.start.getTime() - datetime.parse(viewOptions.renderStartDate)
-        )) / datetime.MILLISECONDS_PER_DAY, 10) || 0,
+        fromLeft = Math.ceil(
+            (model.start - viewOptions.renderStartDate) / datetime.MILLISECONDS_PER_DAY
+        ) || 0,
         grids = dragStartEventData.grids;
 
     return function(xIndex) {
@@ -156,4 +155,3 @@ DayGridResizeGuide.prototype._onDrag = function(dragEventData) {
 };
 
 module.exports = DayGridResizeGuide;
-

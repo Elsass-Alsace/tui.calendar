@@ -22,28 +22,37 @@ Place a `<div></div>` where you want TOAST UI Calendar rendered.
 
 ### javascript
 
-Initialize the Calendar class with given element to make an Calendar.
+Initialize the Calendar class with given element to make a Calendar.
 
 ```javascript
 var Calendar = require('tui-calendar'); /* CommonJS */
+require("tui-calendar/dist/tui-calendar.css");
+
+// If you use the default popups, use this.
+require("tui-date-picker/dist/tui-date-picker.css");
+require("tui-time-picker/dist/tui-time-picker.css");
 ```
 
 ```javascript
 import Calendar from 'tui-calendar'; /* ES6 */
+import "tui-calendar/dist/tui-calendar.css";
+
+// If you use the default popups, use this.
+import 'tui-date-picker/dist/tui-date-picker.css';
+import 'tui-time-picker/dist/tui-time-picker.css';
 ```
 
-Then you can create a calendar instance with [options](https://nhnent.github.io/tui.calendar/latest/global.html#Options) to set configuration.
+Then you can create a calendar instance with [options](https://nhn.github.io/tui.calendar/latest/Options) to set configuration.
 
 ```javascript
 var calendar = new Calendar('#calendar', {
   defaultView: 'month',
   taskView: true,
   template: {
-    monthGridHeader: function(model) {
-      var date = new Date(model.date);
-      var template = '<span class="tui-full-calendar-weekday-grid-date">' + date.getDate() + '</span>';
-      return template;
+    monthDayname: function(dayname) {
+      return '<span class="calendar-week-dayname-name">' + dayname.label + '</span>';
     }
+    ...
   }
 });
 ```
@@ -54,7 +63,7 @@ var calendar = new Calendar('#calendar', {
 
 Create schedules. Update a schedule, Delete a schedule.
 
-Find out `Schedule` object in [here](https://nhnent.github.io/tui.calendar/latest/global.html#Schedule)
+Find out `Schedule` object in [here](https://nhn.github.io/tui.calendar/latest/Schedule)
 
 #### Create schedules
 
@@ -166,13 +175,9 @@ Update the schedule when dragging it.
 ```javascript
 calendar.on('beforeUpdateSchedule', function(event) {
     var schedule = event.schedule;
-    var startTime = event.start;
-    var endTime = event.end;
+    var changes = event.changes;
 
-    calendar.updateSchedule(schedule.id, schedule.calendarId, {
-        start: startTime,
-        end: endTime
-    });
+    calendar.updateSchedule(schedule.id, schedule.calendarId, changes);
 });
 ```
 
@@ -273,7 +278,7 @@ calendar.changeView(calendar.getViewName(), true);
 
 ### Calendar options
 
-Find out more options in [here](https://nhnent.github.io/tui.calendar/latest/global.html#Options)
+Find out more options in [here](https://nhn.github.io/tui.calendar/latest/Options)
 
 ```js
 var calendar = new Calendar('#calendar', {
@@ -341,16 +346,15 @@ var calendar = new Calendar('#calendar', {
             return '<i class="fa fa-close"></i>';
         },
         monthGridHeader: function(model) {
-            var date = new Date(model.date);
-            var template = '<span class="tui-full-calendar-weekday-grid-date">' + date.getDate() + '</span>';
-            var today = model.isToday ? 'TDY' : '';
-            if (today) {
-                template += '<span class="tui-full-calendar-weekday-grid-date-decorator">' + today + '</span>';
+            var date = parseInt(model.date.split('-')[2], 10);
+            var classNames = [];
+
+            classNames.push(config.classname('weekday-grid-date'));
+            if (model.isToday) {
+                classNames.push(config.classname('weekday-grid-date-decorator'));
             }
-            if (tempHolidays[date.getDate()]) {
-                template += '<span class="tui-full-calendar-weekday-grid-date-title">' + tempHolidays[date.getDate()] + '</span>';
-            }
-            return template;
+
+            return '<span class="' + classNames.join(' ') + '">' + date + '</span>';
         },
         monthGridHeaderExceed: function(hiddenSchedules) {
             return '<span class="calendar-more-schedules">+' + hiddenSchedules + '</span>';
@@ -369,7 +373,7 @@ var calendar = new Calendar('#calendar', {
         monthDayname: function(dayname) {
             return '<span class="calendar-week-dayname-name">' + dayname.label + '</span>';
         },
-        timegridDisplayPrimayTime: function(time) {
+        timegridDisplayPrimaryTime: function(time) {
             var meridiem = time.hour < 12 ? 'am' : 'pm';
 
             return time.hour + ' ' + meridiem;
@@ -424,9 +428,9 @@ cal.on({
     'beforeCreateSchedule': function(e) {
         console.log('beforeCreateSchedule', e);
         // open a creation popup
-        
+
         // If you dont' want to show any popup, just use `e.guide.clearGuideElement()`
-        
+
         // then close guide element(blue box from dragging or clicking days)
         e.guide.clearGuideElement();
     },
@@ -458,17 +462,30 @@ Show multiple timezones in weekly and daily view. The `showTimezoneCollapseButto
 ```js
 var cal = new Calendar('#calendar', {
     timezones: [{
-        timezoneOffset: 540,	
-        // displayLabel: 'GMT+09:00',	
-        tooltip: 'Seoul'	
-    }, {	
-        timezoneOffset: -420,	
-        // displayLabel: 'GMT-08:00',	
-        tooltip: 'Los Angeles'	
-    }],	
-    week: {	
-        showTimezoneCollapseButton: true,	
-        timezonesCollapsed: false	
+        timezoneOffset: 540,
+        // displayLabel: 'GMT+09:00',
+        tooltip: 'Seoul'
+    }, {
+        timezoneOffset: -420,
+        // displayLabel: 'GMT-08:00',
+        tooltip: 'Los Angeles'
+    }],
+    week: {
+        showTimezoneCollapseButton: true,
+        timezonesCollapsed: false
     }
 });
+```
+
+### Fit the calendar size for parent element
+TOAST UI Calendar's default height is 600px. If you want this calendar to fit to parent element, write container element's css like this.
+
+```css
+#calendar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 5px;
+    top: 64px;
+}
 ```

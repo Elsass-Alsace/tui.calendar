@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
     "noEmit": true,
-    "noImplicitAny": false,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "tui-calendar": ["./../../index.d.ts"]
+    }
   },
   "files": [
     "../../index.d.ts",

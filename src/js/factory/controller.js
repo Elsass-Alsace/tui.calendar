@@ -1,6 +1,6 @@
 /**
  * @fileoverview Controller factory module.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -20,7 +20,7 @@ function mixin(from, to, propertyName) {
     var obj = to[propertyName] = {};
 
     util.forEach(from, function(method, methodName) {
-        obj[methodName] = util.bind(method, to);
+        obj[methodName] = method.bind(to);
     });
 }
 

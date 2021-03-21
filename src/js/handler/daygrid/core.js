@@ -1,7 +1,7 @@
 /* eslint no-shadow: 0 */
 /**
  * @fileoverview Base mixin object for handler/daygrid
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -74,10 +74,11 @@ var dayGridCore = {
     /**
      * @param {view} view - view instance.
      * @param {TZDate} startDate - start date
-     * @returns {function|boolean} function that return schedule data by mouse events.
+     * @returns {object} schedule data by mouse events.
      */
     _retriveScheduleDataFromDate: function(view, startDate) {
         var weekdayView = view.children.single(),
+            xIndex = 0,
             datesInRange,
             dragStartXIndex = 0,
             grids,
@@ -93,36 +94,22 @@ var dayGridCore = {
 
         util.forEach(range, function(date, index) {
             if (datetime.isSameDate(date, startDate)) {
-                dragStartXIndex = index;
+                xIndex = dragStartXIndex = index;
             }
         });
 
-        /**
-         * @param {TZDate} targetDate - target date
-         * @returns {object} schedule data.
-         */
-        return function(targetDate) {
-            var xIndex = 0;
+        // apply limitation of creation schedule X index.
+        xIndex = mmax(xIndex, 0);
+        xIndex = mmin(xIndex, datesInRange - 1);
 
-            util.forEach(range, function(date, index) {
-                if (datetime.isSameDate(date, targetDate)) {
-                    xIndex = index;
-                }
-            });
-
-            // apply limitation of creation schedule X index.
-            xIndex = mmax(xIndex, 0);
-            xIndex = mmin(xIndex, datesInRange - 1);
-
-            return {
-                relatedView: view,
-                dragStartXIndex: dragStartXIndex,
-                datesInRange: datesInRange,
-                xIndex: xIndex,
-                triggerEvent: 'manual',
-                grids: grids,
-                range: range
-            };
+        return {
+            relatedView: view,
+            dragStartXIndex: dragStartXIndex,
+            datesInRange: datesInRange,
+            xIndex: xIndex,
+            triggerEvent: 'manual',
+            grids: grids,
+            range: range
         };
     }
 };
@@ -152,4 +139,3 @@ function getX(grids, left) {
 }
 
 module.exports = dayGridCore;
-

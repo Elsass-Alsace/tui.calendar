@@ -1,28 +1,13 @@
 /* eslint complexity: 0 */
 /**
  * @fileoverview Utility module for handling DOM events.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
 var util = require('tui-code-snippet');
-var browser = util.browser,
-    eventKey = '_evt',
-    DRAG = {
-        START: ['touchstart', 'mousedown'],
-        END: {
-            mousedown: 'mouseup',
-            touchstart: 'touchend',
-            pointerdown: 'touchend',
-            MSPointerDown: 'touchend'
-        },
-        MOVE: {
-            mousedown: 'mousemove',
-            touchstart: 'touchmove',
-            pointerdown: 'touchmove',
-            MSPointerDown: 'touchmove'
-        }
-    };
+var eventKey = '_evt',
+    DRAG_START = ['touchstart', 'mousedown'];
 
 var domevent = {
     /**
@@ -157,13 +142,6 @@ var domevent = {
             return;
         }
 
-        // throw exception when deleting host object's property in below IE8
-        if (util.browser.msie && util.browser.version < 9) {
-            obj[eventKey] = null;
-
-            return;
-        }
-
         delete obj[eventKey];
     },
 
@@ -242,7 +220,7 @@ var domevent = {
      * @param {HTMLElement} el HTML element to prevent all event related with click.
      */
     disableClickPropagation: function(el) {
-        domevent.on(el, DRAG.START.join(' ') + ' click dblclick', domevent.stopPropagation);
+        domevent.on(el, DRAG_START.join(' ') + ' click dblclick', domevent.stopPropagation);
     },
 
     /**
@@ -366,11 +344,6 @@ var domevent = {
             relatedTarget: undefined  // eslint-disable-line
         }, eventObj);
 
-        // prevent throw error when inserting wheelDelta property to mouse event on below IE8
-        if (browser.msie && browser.version < 9) {
-            delete e.wheelDelta;
-        }
-
         if (typeof document.createEvent === 'function') {
             evt = document.createEvent('MouseEvents');
             evt.initMouseEvent(type,
@@ -429,8 +402,17 @@ var domevent = {
         }
 
         return -1;
+    },
+
+    /**
+     * Get target from event object
+     *
+     * @param {Event} event - The event object
+     * @returns {object} - The event target object
+     */
+    getEventTarget: function(event) {
+        return event.target || event.srcElement;
     }
 };
 
 module.exports = domevent;
-

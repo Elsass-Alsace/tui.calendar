@@ -1,6 +1,6 @@
 /**
  * @fileoverview Module for modification of guide element in schedule resize
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -81,9 +81,9 @@ MonthResizeGuide.prototype._onDragStart = function(dragStartEvent) {
         isResizeMode: true
     }, this.monthResize.monthView);
 
-    this._hideScheduleBlocks(dragStartEvent.model.cid());
-
     this.guide.start(dragStartEvent);
+
+    this._hideScheduleBlocks(dragStartEvent.model.cid());
 
     if (!util.browser.msie) {
         domutil.addClass(global.document.body, config.classname('resizing-x'));
@@ -113,4 +113,3 @@ MonthResizeGuide.prototype._onDragEnd = function() {
 };
 
 module.exports = MonthResizeGuide;
-

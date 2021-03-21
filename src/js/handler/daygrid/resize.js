@@ -1,6 +1,6 @@
 /**
  * @fileoverview Resize handler module for DayGrid view.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -182,20 +182,30 @@ DayGridResize.prototype._onDrag = function(dragEventData) {
 DayGridResize.prototype._updateSchedule = function(scheduleData) {
     var schedule = scheduleData.targetModel,
         dateOffset = scheduleData.xIndex - scheduleData.dragStartXIndex,
-        newEnds = new TZDate(schedule.end.getTime());
+        newEnds = new TZDate(schedule.end);
+    var changes;
 
-    newEnds = new TZDate(newEnds.setDate(newEnds.getDate() + dateOffset));
-    newEnds = new TZDate(Math.max(datetime.end(schedule.start).getTime(), newEnds.getTime()));
+    newEnds = newEnds.addDate(dateOffset);
+    newEnds = new TZDate(common.maxDate(datetime.end(schedule.start), newEnds));
+
+    changes = common.getScheduleChanges(
+        schedule,
+        ['end'],
+        {end: newEnds}
+    );
 
     /**
      * @event DayGridResize#beforeUpdateSchedule
      * @type {object}
-     * @property {Schedule} schedule - schedule instance to update
-     * @property {date} start - start time to update
-     * @property {date} end - end time to update
+     * @property {Schedule} schedule - The original schedule instance
+     * @property {Date} start - Deprecated: start time to update
+     * @property {Date} end - Deprecated: end time to update
+     * @property {object} changes - end time to update
+     *  @property {date} end - end time to update
      */
     this.fire('beforeUpdateSchedule', {
         schedule: schedule,
+        changes: changes,
         start: schedule.getStarts(),
         end: newEnds
     });
@@ -266,4 +276,3 @@ common.mixin(dayGridCore, DayGridResize);
 util.CustomEvents.mixin(DayGridResize);
 
 module.exports = DayGridResize;
-

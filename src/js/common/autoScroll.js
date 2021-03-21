@@ -1,6 +1,6 @@
 /**
  * @fileoverview Add autoscroll feature to elements that prevented text selection.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -148,7 +148,7 @@ AutoScroll.prototype._onMouseDown = function(mouseDownEvent) {
     }
 
     window.clearInterval(this._intervalID);
-    this._intervalID = window.setInterval(util.bind(this._onTick, this), SCROLL_INTERVAL);
+    this._intervalID = window.setInterval(this._onTick.bind(this), SCROLL_INTERVAL);
 
     domevent.on(global, {
         'mousemove': this._onMouseMove,
@@ -243,4 +243,3 @@ AutoScroll.prototype._onTick = function() {
 };
 
 module.exports = AutoScroll;
-

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Module for Time.Creation effect while dragging.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -11,7 +11,6 @@ var domutil = require('../../common/domutil');
 var reqAnimFrame = require('../../common/reqAnimFrame');
 var ratio = require('../../common/common').ratio;
 var TZDate = require('../../common/timezone').Date;
-var MIN30 = (datetime.MILLISECONDS_PER_MINUTES * 30);
 var MIN60 = (datetime.MILLISECONDS_PER_MINUTES * 60);
 
 /**
@@ -69,7 +68,7 @@ function TimeCreationGuide(timeCreation) {
 /**
  * Destroy method.
  */
-TimeCreationGuide.prototype.destroy = function() {
+TimeCreationGuide.prototype.destroy = function () {
     this.clearGuideElement();
     this.timeCreation.off(this);
     this.timeCreation = this._styleUnit = this._styleStart =
@@ -79,13 +78,13 @@ TimeCreationGuide.prototype.destroy = function() {
 /**
  * Clear guide element.
  */
-TimeCreationGuide.prototype.clearGuideElement = function() {
+TimeCreationGuide.prototype.clearGuideElement = function () {
     var guideElement = this.guideElement,
         timeElement = this.guideTimeElement;
 
     domutil.remove(guideElement);
 
-    reqAnimFrame.requestAnimFrame(function() {
+    reqAnimFrame.requestAnimFrame(function () {
         guideElement.style.display = 'none';
         guideElement.style.top = '';
         guideElement.style.height = '';
@@ -97,11 +96,11 @@ TimeCreationGuide.prototype.clearGuideElement = function() {
  * Refresh guide element
  * @param {number} top - The number of guide element's style top
  * @param {number} height - The number of guide element's style height
- * @param {Date} start - start time of schedule to create
- * @param {Date} end - end time of schedule to create
+ * @param {TZDate} start - start time of schedule to create
+ * @param {TZDate} end - end time of schedule to create
  * @param {boolean} bottomLabel - is label need to render bottom of guide element?
  */
-TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, end, bottomLabel) {
+TimeCreationGuide.prototype._refreshGuideElement = function (top, height, start, end, bottomLabel) {
     var guideElement = this.guideElement;
     var timeElement = this.guideTimeElement;
 
@@ -128,12 +127,12 @@ TimeCreationGuide.prototype._refreshGuideElement = function(top, height, start, 
  * @param {Time} relatedView - time view instance related with schedule
  * @returns {array} unit data.
  */
-TimeCreationGuide.prototype._getUnitData = function(relatedView) {
+TimeCreationGuide.prototype._getUnitData = function (relatedView) {
     var viewOpt = relatedView.options,
         viewHeight = relatedView.getViewBound().height,
         hourLength = viewOpt.hourEnd - viewOpt.hourStart,
         todayStart = datetime.parse(viewOpt.ymd),
-        todayEnd = datetime.end(todayStart);
+        todayEnd = datetime.getStartOfNextDay(todayStart);
 
     todayStart.setHours(0, 0, 0, 0);
     todayStart.setHours(viewOpt.hourStart);
@@ -146,8 +145,8 @@ TimeCreationGuide.prototype._getUnitData = function(relatedView) {
     return [
         viewHeight,
         hourLength,
-        Number(todayStart),
-        Number(todayEnd),
+        todayStart,
+        todayEnd,
         viewHeight / hourLength
     ];
 };
@@ -156,17 +155,17 @@ TimeCreationGuide.prototype._getUnitData = function(relatedView) {
  * Applying limitation to supplied data and return it.
  * @param {number} top - top pixel of guide element
  * @param {number} height - height pixel of guide element
- * @param {number} start - relative time value of dragstart point
- * @param {number} end - relative time value of dragend point
+ * @param {TZDate} start - relative time value of dragstart point
+ * @param {TZDate} end - relative time value of dragend point
  * @returns {array} limited style data
  */
-TimeCreationGuide.prototype._limitStyleData = function(top, height, start, end) {
+TimeCreationGuide.prototype._limitStyleData = function (top, height, start, end) {
     var unitData = this._styleUnit;
 
     top = common.limit(top, [0], [unitData[0]]);
     height = common.limit(top + height, [0], [unitData[0]]) - top;
-    start = common.limit(start, [unitData[2]], [unitData[3]]);
-    end = common.limit(end, [unitData[2]], [unitData[3]]);
+    start = common.limitDate(start, unitData[2], unitData[3]);
+    end = common.limitDate(end, unitData[2], unitData[3]);
 
     return [top, height, start, end];
 };
@@ -175,26 +174,28 @@ TimeCreationGuide.prototype._limitStyleData = function(top, height, start, end) 
  * Get function to calculate guide element UI data from supplied units
  * @param {number} viewHeight - total height of view's container element
  * @param {number} hourLength - hour length that rendered in time view
- * @param {number} todayStart - time for view's start date
+ * @param {TZDate} todayStart - time for view's start date
  * @returns {function} UI data calculator function
  */
-TimeCreationGuide.prototype._getStyleDataFunc = function(viewHeight, hourLength, todayStart) {
-    var todayEnd = Number(datetime.end(new TZDate(Number(todayStart))));
+TimeCreationGuide.prototype._getStyleDataFunc = function (viewHeight, hourLength, todayStart) {
+    var todayStartTime = todayStart;
+    var todayEndTime = datetime.end(todayStart);
 
     /**
-     * Get top, time value from schedule dat
+     * Get top, time value from schedule data
      * @param {object} scheduleData - schedule data object
      * @returns {number[]} top, time
      */
     function getStyleData(scheduleData) {
+        var minMinutes = 30;
         var gridY = scheduleData.nearestGridY,
             gridTimeY = scheduleData.nearestGridTimeY,
-            gridEndTimeY = scheduleData.nearestGridEndTimeY || gridTimeY + MIN30,
+            gridEndTimeY = scheduleData.nearestGridEndTimeY || new TZDate(gridTimeY).addMinutes(minMinutes),
             top, startTime, endTime;
 
         top = common.limit(ratio(hourLength, viewHeight, gridY), [0], [viewHeight]);
-        startTime = common.limit(gridTimeY, [todayStart], [todayEnd]);
-        endTime = common.limit(gridEndTimeY, [todayStart], [todayEnd]);
+        startTime = common.limitDate(gridTimeY, todayStartTime, todayEndTime);
+        endTime = common.limitDate(gridEndTimeY, todayStartTime, todayEndTime);
 
         return [top, startTime, endTime];
     }
@@ -206,17 +207,17 @@ TimeCreationGuide.prototype._getStyleDataFunc = function(viewHeight, hourLength,
  * DragStart event handler
  * @param {object} dragStartEventData - dragStart schedule data.
  */
-TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
+TimeCreationGuide.prototype._createGuideElement = function (dragStartEventData) {
     var relatedView = dragStartEventData.relatedView,
-        hourStart = datetime.millisecondsFrom('hour', dragStartEventData.hourStart),
+        hourStart = datetime.millisecondsFrom('hour', dragStartEventData.hourStart) || 0,
         unitData, styleFunc, styleData, result, top, height, start, end;
 
     unitData = this._styleUnit = this._getUnitData(relatedView);
     styleFunc = this._styleFunc = this._getStyleDataFunc.apply(this, unitData);
     styleData = this._styleStart = styleFunc(dragStartEventData);
 
-    start = styleData[1] + hourStart;
-    end = styleData[2] + hourStart || (start + MIN30);
+    start = new TZDate(styleData[1]).addMinutes(datetime.minutesFromHours(hourStart));
+    end = new TZDate(styleData[2]).addMinutes(datetime.minutesFromHours(hourStart));
     top = styleData[0];
     height = (unitData[4] * (end - start) / MIN60);
 
@@ -236,7 +237,8 @@ TimeCreationGuide.prototype._createGuideElement = function(dragStartEventData) {
  * Drag event handler
  * @param {object} dragEventData - drag schedule data.
  */
-TimeCreationGuide.prototype._onDrag = function(dragEventData) {
+TimeCreationGuide.prototype._onDrag = function (dragEventData) {
+    var minutes30 = 30;
     var styleFunc = this._styleFunc,
         unitData = this._styleUnit,
         startStyle = this._styleStart,
@@ -257,24 +259,24 @@ TimeCreationGuide.prototype._onDrag = function(dragEventData) {
             startStyle[0],
             (endStyle[0] - startStyle[0]) + heightOfHalfHour,
             startStyle[1],
-            (endStyle[1] + MIN30)
+            new TZDate(endStyle[1]).addMinutes(minutes30)
         );
     } else {
         result = this._limitStyleData(
             endStyle[0],
             (startStyle[0] - endStyle[0]) + heightOfHalfHour,
             endStyle[1],
-            (startStyle[1] + MIN30)
+            new TZDate(startStyle[1]).addMinutes(minutes30)
         );
         result.push(true);
     }
 
-    reqAnimFrame.requestAnimFrame(function() {
+    reqAnimFrame.requestAnimFrame(function () {
         refreshGuideElement.apply(null, result);
     });
 };
 
-TimeCreationGuide.prototype.applyTheme = function(theme) {
+TimeCreationGuide.prototype.applyTheme = function (theme) {
     var style = this.guideElement.style;
     var timeStyle = this.guideTimeElement.style;
 

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Effect module for DayGrid.Move
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -9,7 +9,6 @@ var config = require('../../config');
 var datetime = require('../../common/datetime');
 var domutil = require('../../common/domutil');
 var reqAnimFrame = require('../../common/reqAnimFrame');
-var TZDate = require('../../common/timezone').Date;
 
 /**
  * Class for DayGrid.Move dragging effect.
@@ -109,7 +108,7 @@ DayGridMoveGuide.prototype._showOriginScheduleBlocks = function() {
 };
 
 /**
- * Highlight element blocks 
+ * Highlight element blocks
  * @param {Schedule} model - model
  * @param {HTMLElement} parent - parent element
  */
@@ -174,10 +173,10 @@ DayGridMoveGuide.prototype._getScheduleBlockDataFunc = function(dragStartEventDa
         originScheduleEnds = datetime.end(model.end),
         renderStartDate = datetime.start(range[0]),
         renderEndDate = datetime.end(range[range.length - 1]),
-        fromLeft = (new TZDate(originScheduleStarts.getTime() -
-            renderStartDate.getTime())) / datetime.MILLISECONDS_PER_DAY || 0,
-        fromRight = (new TZDate(originScheduleEnds.getTime() -
-            renderEndDate.getTime())) / datetime.MILLISECONDS_PER_DAY || 0;
+        fromLeft = Math.ceil((originScheduleStarts.getTime() -
+            renderStartDate.getTime()) / datetime.MILLISECONDS_PER_DAY) || 0,
+        fromRight = Math.ceil((originScheduleEnds.getTime() -
+            renderEndDate.getTime()) / datetime.MILLISECONDS_PER_DAY) || 0;
 
     return function(indexOffset) {
         return {
@@ -272,4 +271,3 @@ function getScheduleBlockWidth(left, size, grids) {
 }
 
 module.exports = DayGridMoveGuide;
-

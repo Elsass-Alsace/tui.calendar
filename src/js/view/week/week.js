@@ -1,6 +1,6 @@
 /**
  * @fileoverview View of days UI.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -10,20 +10,6 @@ var domutil = require('../../common/domutil');
 var datetime = require('../../common/datetime');
 var TZDate = require('../../common/timezone').Date;
 var View = require('../view');
-
-/**
- * FullCalendar uses only date information (YYYY-MM-DD)
- * SplitTimeCalendar uses a string containing time zone information, so it branches.
- * @param {String} dateString - date string
- * @returns {TZDate}
- */
-function parseRangeDateString(dateString) {
-    if (dateString.length === 10) {
-        return datetime.parse(dateString);
-    }
-
-    return new TZDate(dateString);
-}
 
 /**
  * @constructor
@@ -36,9 +22,10 @@ function parseRangeDateString(dateString) {
  * @param {string} [options.cssPrefix] - CSS classname prefix
  * @param {HTMLElement} container The element to use container for this view.
  * @param {object} panels - schedule panels like 'milestone', 'task', 'allday', 'time'
+ * @param {string} viewName - 'week', 'day'
  * @extends {View}
  */
-function Week(controller, options, container, panels) {
+function Week(controller, options, container, panels, viewName) {
     var range;
 
     container = domutil.appendHTMLElement('div', container);
@@ -86,6 +73,10 @@ function Week(controller, options, container, panels) {
     this.state = {
         timezonesCollapsed: this.options.timezonesCollapsed
     };
+
+    if (viewName === 'day') {
+        _disableDayOptions(this.options);
+    }
 }
 
 util.inherit(Week, View);
@@ -110,8 +101,8 @@ Week.prototype.render = function() {
         state = this.state;
     var renderStartDate, renderEndDate, schedulesInDateRange, viewModel, grids, range;
 
-    renderStartDate = parseRangeDateString(options.renderStartDate);
-    renderEndDate = parseRangeDateString(options.renderEndDate);
+    renderStartDate = new TZDate(options.renderStartDate);
+    renderEndDate = new TZDate(options.renderEndDate);
 
     range = datetime.range(
         datetime.start(renderStartDate),
@@ -223,7 +214,14 @@ Week.prototype._getRenderDateRange = function(baseDate) {
     };
 };
 
+/**
+ * disable options for day view
+ * @param {WeekOptions} options - week options to disable
+ */
+function _disableDayOptions(options) {
+    options.workweek = false;
+}
+
 util.CustomEvents.mixin(Week);
 
 module.exports = Week;
-

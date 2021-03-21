@@ -1,6 +1,6 @@
 /**
  * @fileoverview Move handler for DayGrid view.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -188,21 +188,28 @@ DayGridMove.prototype._onDrag = function(dragEventData) {
 DayGridMove.prototype._updateSchedule = function(scheduleData) {
     var schedule = scheduleData.targetModel,
         dateOffset = scheduleData.xIndex - scheduleData.dragStartXIndex,
-        newStarts = new TZDate(schedule.start.getTime()),
-        newEnds = new TZDate(schedule.end.getTime());
+        newStarts = new TZDate(schedule.start),
+        newEnds = new TZDate(schedule.end);
 
-    newStarts = new TZDate(newStarts.setDate(newStarts.getDate() + dateOffset));
-    newEnds = new TZDate(newEnds.setDate(newEnds.getDate() + dateOffset));
+    newStarts = newStarts.addDate(dateOffset);
+    newEnds = newEnds.addDate(dateOffset);
 
     /**
      * @event DayGridMove#beforeUpdateSchedule
      * @type {object}
-     * @property {Schedule} schedule - schedule instance to update
-     * @property {Date} start - start time to update
-     * @property {Date} end - end time to update
+     * @property {Schedule} schedule - The original schedule instance
+     * @property {Date} start - Deprecated: start time to update
+     * @property {Date} end - Deprecated: end time to update
+     * @property {object} changes - start and end time to update
+     *  @property {Date} start - start time to update
+     *  @property {Date} end - end time to update
      */
     this.fire('beforeUpdateSchedule', {
         schedule: schedule,
+        changes: {
+            start: newStarts,
+            end: newEnds
+        },
         start: newStarts,
         end: newEnds
     });
@@ -273,4 +280,3 @@ common.mixin(dayGridCore, DayGridMove);
 util.CustomEvents.mixin(DayGridMove);
 
 module.exports = DayGridMove;
-

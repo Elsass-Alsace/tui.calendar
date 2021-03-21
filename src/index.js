@@ -1,20 +1,15 @@
 /**
  * @fileoverview The entry file of fullcalendar
- * @author NHN Ent. FE Development Team
+ * @author NHN FE Development Lab
  */
 
 'use strict';
 
 var util = require('tui-code-snippet');
 var Calendar = require('./js/factory/calendar');
-var GA_TRACKING_ID = 'UA-129951699-1';
 
 require('./css/main.styl');
 require('./js/view/template/helper');
-
-if (util.sendHostname) {
-    util.sendHostname('calendar', GA_TRACKING_ID);
-}
 
 // for jquery
 if (global.jQuery) {

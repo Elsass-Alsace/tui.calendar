@@ -123,10 +123,11 @@ describe('datetime', function() {
     });
 
     it('toUTC() convert non UTC date to UTC.', function() {
+        var timezoneOffset = Math.abs(new Date().getTimezoneOffset());
         var d = new TZDate('1970-01-01T00:00:00Z'),
             utc = dt.toUTC(d);
 
-        expect(Math.abs(utc - d)).toBe(9 * 60 * 60 * 1000);
+        expect(Math.abs(utc - d)).toBe(timezoneOffset * 60 * 1000);
         expect(d).not.toEqual(utc);
     });
 
@@ -201,8 +202,8 @@ describe('datetime', function() {
 
             // expect(new TZDate(dt.format(birth, 'LOCAL'))).toEqual(birth);
 
-            // var d2 = new TZDate('2015-05-01T09:30:00+09:00');
-            // var d3 = new TZDate('2015-05-01T10:00:00+09:00');
+            // var d2 = new TZDate('2015-05-01T09:30:00');
+            // var d3 = new TZDate('2015-05-01T10:00:00');
             // expect(new TZDate(dt.format(d2, 'LOCAL'))).not.toEqual(d3);
         });
     });
@@ -226,7 +227,7 @@ describe('datetime', function() {
 
         it('Providing iteratee allows you to manipulate each date element.', function() {
             var month = new TZDate('2014-10-01T00:00:00+09:00');
-            
+
             var actual = dt.arr2dCalendar(month, options, function(date) {
                 return { customize: true, date: date };
             });
@@ -235,7 +236,7 @@ describe('datetime', function() {
         });
 
         it('2014/10 will be rendered on 9/28 - 11/1 at Sunday time.', function() {
-            var month = new TZDate('2014-10-01T00:00:00+09:00');
+            var month = new TZDate('2014-10-01T00:00:00');
             var actual = dt.arr2dCalendar(month, options);
             var expected = [
                 [createDate(2014, 9, 28),
@@ -441,18 +442,18 @@ describe('datetime', function() {
     });
 
     it('isSameMonth', function() {
-        var d1 = new TZDate('2015-06-12T09:30:00+09:00');
-        var d2 = new TZDate('2015-06-13T09:30:00+09:00');
-        var d3 = new TZDate('2015-07-12T09:30:00+09:00');
+        var d1 = new TZDate('2015-06-12T09:30:00');
+        var d2 = new TZDate('2015-06-13T09:30:00');
+        var d3 = new TZDate('2015-07-12T09:30:00');
 
         expect(dt.isSameMonth(d1, d2)).toBe(true);
         expect(dt.isSameMonth(d1, d3)).toBe(false);
     });
 
     it('isSameDate', function() {
-        var d1 = new TZDate('2015-06-12T09:30:00+09:00');
-        var d2 = new TZDate('2015-06-13T09:30:00+09:00');
-        var d3 = new TZDate('2015-07-12T09:30:00+09:00');
+        var d1 = new TZDate('2015-06-12T09:30:00');
+        var d2 = new TZDate('2015-06-13T09:30:00');
+        var d3 = new TZDate('2015-07-12T09:30:00');
 
         expect(dt.isSameDate(d1, d2)).toBe(false);
         expect(dt.isSameDate(d1, d3)).toBe(false);
@@ -473,4 +474,58 @@ describe('datetime', function() {
         var month = new TZDate('2015-07-15T00:00:00+09:00');
         expect(dt.endDateOfMonth(month)).toEqual(new TZDate('2015-07-31T23:59:59+09:00'));
     });
+
+    it('getDateDifference', function() {
+        var d1 = new TZDate('2020-02-29T09:30:30+09:00');
+        var d2 = new TZDate('2020-02-29T23:00:00+09:00');
+        var d3 = new TZDate('2020-03-01T23:00:00+09:00');
+        var d4 = new TZDate('2020-02-27T00:30:00+09:00');
+        var d5 = new TZDate('2012-03-02T00:00:00+09:00')
+        var d6 = new TZDate('2012-03-01T03:00:00+09:00')
+
+        expect(dt.getDateDifference(d1, d2)).toEqual(0);
+        expect(dt.getDateDifference(d1, d3)).toEqual(-1);
+        expect(dt.getDateDifference(d1, d4)).toEqual(2);
+        expect(dt.getDateDifference(d5, d6)).toEqual(1);
+    });
+
+    it('convertStartDayToLastDay', function() {
+      var d1 = new TZDate('2020-04-24');
+      var d2 = new TZDate('2020-04-24T00:00:00+09:00');
+
+      expect(dt.convertStartDayToLastDay(d1)).toEqual(new TZDate('2020-04-24'));
+      expect(dt.convertStartDayToLastDay(d2)).toEqual(new TZDate('2020-04-23T23:59:59+09:00'));
+    });
+
+    it('getDateDifference', function() {
+      var d1 = new TZDate('2020-02-29T09:30:30+09:00');
+      var d2 = new TZDate('2020-02-29T23:00:00+09:00');
+      var d3 = new TZDate('2020-03-01T23:00:00+09:00');
+      var d4 = new TZDate('2020-02-27T00:30:00+09:00');
+      var d5 = new TZDate('2012-03-02T00:00:00+09:00')
+      var d6 = new TZDate('2012-03-01T03:00:00+09:00')
+
+      expect(dt.getDateDifference(d1, d2)).toBe(0);
+      expect(dt.getDateDifference(d1, d3)).toBe(-1);
+      expect(dt.getDateDifference(d1, d4)).toBe(2);
+      expect(dt.getDateDifference(d5, d6)).toBe(1);
+  });
+
+  it('getHourDifference', function() {
+      var d1 = new TZDate('2020-03-29T23:00:00+09:00');
+      var d2 = new TZDate('2020-03-30T00:00:00+09:00');
+      var d3 = new TZDate('2020-03-30T01:00:00+09:00');
+
+      expect(dt.getHourDifference(d1, d2)).toBe(-1);
+      expect(dt.getHourDifference(d1, d3)).toBe(-2);
+  });
+
+  it ('hasMultiDates', function() {
+      var d1 = new TZDate('2020-03-29T23:00:00+09:00');
+      var d2 = new TZDate('2020-03-30T00:00:00+09:00');
+      var d3 = new TZDate('2020-03-30T01:00:00+09:00');
+
+      expect(dt.hasMultiDates(d1, d2)).toBe(false);
+      expect(dt.hasMultiDates(d1, d3)).toBe(true);
+  });
 });

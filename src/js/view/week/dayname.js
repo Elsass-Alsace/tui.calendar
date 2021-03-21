@@ -1,6 +1,6 @@
 /**
  * @fileoverview View for rendering daynames
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -54,7 +54,7 @@ util.inherit(DayName, View);
 DayName.prototype._getBaseViewModel = function(start, end, grids) {
     var daynames = this.options.daynames,
         theme = this.theme,
-        now = new TZDate(),
+        now = new TZDate().toLocalTime(),
         viewModel;
 
     viewModel = util.map(datetime.range(

@@ -208,7 +208,7 @@ describe('Base.Week', function() {
             schedule.model.end = new TZDate('2018-05-03T09:00:00+09:00');
             expect(hourRangeFilter(schedule)).toBe(true); // true, false??
 
-            schedule.model.start = new TZDate('2018-05-02T11:00:00+15:00');
+            schedule.model.start = new TZDate('2018-05-02T11:00:00+09:00');
             schedule.model.end = new TZDate('2018-05-03T09:00:00+09:00');
             expect(hourRangeFilter(schedule)).toBe(true);
         });

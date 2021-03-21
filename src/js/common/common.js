@@ -1,14 +1,14 @@
 /**
  * @fileoverview common/general utilities.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
 var util = require('tui-code-snippet');
-var aps = Array.prototype.slice;
 
 var domutil = require('../common/domutil'),
     Collection = require('../common/collection');
+var datetime = require('../common/datetime');
 
 /**
  * Default schedule id getter for collection
@@ -21,17 +21,10 @@ function scheduleIDGetter(schedule) {
 
 module.exports = {
     /**
-     * @param {...*} initItems - items to add newly created collection.
      * @returns {Collection} new collection for schedule models.
      */
-    createScheduleCollection: function(initItems) {    // eslint-disable-line
-        var collection = new Collection(scheduleIDGetter);
-
-        if (arguments.length) {
-            collection.add.apply(collection, arguments);
-        }
-
-        return collection;
+    createScheduleCollection: function() {
+        return new Collection(scheduleIDGetter);
     },
 
     /**
@@ -68,51 +61,6 @@ module.exports = {
     },
 
     /**
-     * pick value from object then return utility object to treat it.
-     * @param {object} obj - object to search supplied path property.
-     * @param {...string} paths - rest parameter that string value to search property in object.
-     * @returns {object} pick object.
-     */
-    pick2: function(obj, paths) {    // eslint-disable-line
-        var result = util.pick.apply(null, arguments),
-            pick;
-
-        pick = {
-            /**
-             * @returns {*} picked value.
-             */
-            val: function() {
-                return result;
-            },
-
-            /**
-             * invoke supplied function in picked object.
-             *
-             * the callback context is set picked object.
-             * @param {string|function} fn - function to invoke in picked object.
-             * @returns {*} result of invoke.
-             */
-            then: function(fn) {
-                var args;
-
-                if (!result) {
-                    return undefined;    //eslint-disable-line
-                }
-
-                args = aps.call(arguments, 1);
-
-                if (util.isString(fn)) {
-                    return (util.pick(result, fn) || function() {}).apply(result, args);
-                }
-
-                return fn.call(result, result);
-            }
-        };
-
-        return pick;
-    },
-
-    /**
      * Mixin method.
      *
      * (extend methods except property name 'mixin')
@@ -135,6 +83,38 @@ module.exports = {
         v = Math.min.apply(null, [v].concat(maxArr));
 
         return v;
+    },
+
+    /**
+     * Limit supplied date base on `min`, `max`
+     * @param {TZDate} date - date
+     * @param {TZDate} min - min
+     * @param {TZDate} max - max
+     * @returns {TZDate} limited value
+     */
+    limitDate: function(date, min, max) {
+        if (date < min) {
+            return min;
+        }
+        if (date > max) {
+            return max;
+        }
+
+        return date;
+    },
+
+    /**
+     * Max value with TZDate type for timezone calculation
+     * @param {TZDate} d1 - date 1
+     * @param {TZDate} d2 - date 2
+     * @returns {TZDate}
+     */
+    maxDate: function(d1, d2) {
+        if (d1 > d2) {
+            return d1;
+        }
+
+        return d2;
     },
 
     stripTags: function(str) {
@@ -163,7 +143,7 @@ module.exports = {
     },
 
     /**
-     * Set 'title' attribute for all element that has exceeded content in
+     * Set 'title' attribute for all elements that have exceeded content in
      * container
      * @param {string} selector - CSS selector {@see domutil#find}
      * @param {HTMLElement} container - container element
@@ -288,6 +268,22 @@ module.exports = {
         }, contextopt);
 
         return found;
+    },
+
+    getScheduleChanges: function(schedule, propNames, data) {
+        var changes = {};
+        var dateProps = ['start', 'end'];
+
+        util.forEach(propNames, function(propName) {
+            if (dateProps.indexOf(propName) > -1) {
+                if (datetime.compare(schedule[propName], data[propName])) {
+                    changes[propName] = data[propName];
+                }
+            } else if (!util.isUndefined(data[propName]) && schedule[propName] !== data[propName]) {
+                changes[propName] = data[propName];
+            }
+        });
+
+        return util.isEmpty(changes) ? null : changes;
     }
 };
-

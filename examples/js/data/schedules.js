@@ -34,6 +34,7 @@ function ScheduleInfo() {
     this.goingDuration = 0;
     this.comingDuration = 0;
     this.recurrenceRule = '';
+    this.state = '';
 
     this.raw = {
         memo: '',
@@ -52,8 +53,6 @@ function ScheduleInfo() {
 }
 
 function generateTime(schedule, renderStart, renderEnd) {
-    var baseDate = new Date(renderStart);
-    var singleday = chance.bool({likelihood: 70});
     var startDate = moment(renderStart.getTime())
     var endDate = moment(renderEnd.getTime());
     var diffDate = endDate.diff(startDate, 'days');
@@ -121,7 +120,7 @@ function generateRandomSchedule(calendar, renderStart, renderEnd) {
     schedule.location = chance.address();
     schedule.attendees = chance.bool({likelihood: 70}) ? generateNames() : [];
     schedule.recurrenceRule = chance.bool({likelihood: 20}) ? 'repeated events' : '';
-
+    schedule.state = chance.bool({likelihood: 20}) ? 'Free' : 'Busy';
     schedule.color = calendar.color;
     schedule.bgColor = calendar.bgColor;
     schedule.dragBgColor = calendar.dragBgColor;
@@ -140,6 +139,12 @@ function generateRandomSchedule(calendar, renderStart, renderEnd) {
     schedule.raw.creator.company = chance.company();
     schedule.raw.creator.email = chance.email();
     schedule.raw.creator.phone = chance.phone();
+
+    if (chance.bool({ likelihood: 20 })) {
+        var travelTime = chance.minute();
+        schedule.goingDuration = travelTime;
+        schedule.comingDuration = travelTime;
+    }
 
     ScheduleList.push(schedule);
 }

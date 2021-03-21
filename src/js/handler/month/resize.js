@@ -1,6 +1,6 @@
 /**
  * @fileoverview Module for resize schedule in month view
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -12,6 +12,8 @@ var config = require('../../config'),
     getMousePosData = require('./core'),
     MonthResizeGuide = require('./resizeGuide'),
     TZDate = require('../../common/timezone').Date;
+
+var common = require('../../common/common');
 
 /**
  * @constructor
@@ -70,19 +72,27 @@ MonthResize.prototype.destroy = function() {
  */
 MonthResize.prototype._updateSchedule = function(scheduleCache) {
     // You can not change the start date of the event. Only the end time can be changed.
-    var newEnd = datetime.end(new TZDate(Number(scheduleCache.end))),
+    var newEnd = datetime.end(new TZDate(scheduleCache.end)),
         schedule = scheduleCache.schedule;
+    var changes = common.getScheduleChanges(
+        schedule,
+        ['end'],
+        {end: newEnd}
+    );
 
     /**
      * @event MonthResize#beforeUpdateSchedule
      * @type {object}
-     * @property {Schedule} schedule - schedule instance to update
-     * @property {Date} start - start time to update
-     * @property {Date} end - end time to update
+     * @property {Schedule} schedule - The original schedule instance
+     * @property {Date} start - Deprecated: start time to update
+     * @property {Date} end - Deprecated: end time to update
+     * @property {object} changes - end time to update
+     *  @property {date} end - end time to update
      */
     this.fire('beforeUpdateSchedule', {
         schedule: schedule,
-        start: new TZDate(Number(schedule.getStarts())),
+        changes: changes,
+        start: new TZDate(schedule.getStarts()),
         end: newEnd
     });
 };
@@ -123,7 +133,7 @@ MonthResize.prototype._onDragStart = function(dragStartEvent) {
     this._cache = {
         schedule: schedule,
         target: target,
-        start: new TZDate(Number(scheduleData.date))
+        start: new TZDate(scheduleData.date)
     };
 
     /**
@@ -186,8 +196,8 @@ MonthResize.prototype._onDragEnd = function(dragEndEvent) {
     scheduleData = this.getScheduleData(dragEndEvent.originEvent);
 
     if (scheduleData) {
-        start = new TZDate(Number(cache.schedule.getStarts()));
-        end = new TZDate(Number(scheduleData.date));
+        start = new TZDate(cache.schedule.getStarts());
+        end = new TZDate(scheduleData.date);
         cache.end = end;
 
         if (start <= cache.end) {
@@ -210,4 +220,3 @@ MonthResize.prototype._onDragEnd = function(dragEndEvent) {
 util.CustomEvents.mixin(MonthResize);
 
 module.exports = MonthResize;
-

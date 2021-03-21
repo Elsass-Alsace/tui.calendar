@@ -1,10 +1,9 @@
 /**
  * @fileoverview RequestAnimFrame
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
-var util = require('tui-code-snippet');
 var requestFn,
     cancelFn;
 
@@ -40,7 +39,7 @@ module.exports = {
      * @returns {number} Unique id
      */
     requestAnimFrame: function(fn, context) {
-        return requestFn.call(global, util.bind(fn, context));
+        return requestFn.call(global, fn.bind(context));
     },
 
     /**
@@ -55,4 +54,3 @@ module.exports = {
         cancelFn.call(global, id);
     }
 };
-

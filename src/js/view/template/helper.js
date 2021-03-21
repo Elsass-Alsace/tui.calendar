@@ -1,7 +1,7 @@
 /* eslint complexity: 0 */
 /**
  * @fileoverview Helpers for handlebar templates.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -12,56 +12,7 @@ var common = require('../../common/common');
 var config = require('../../config');
 var mmax = Math.max;
 var SIXTY_MINUTES = 60;
-
-/**
- * Get CSS syntax for element size
- * @param {number} value - size value to apply element
- * @param {string} postfix - postfix string ex) px, em, %
- * @param {string} prefix - property name ex) width, height
- * @returns {string} CSS syntax
- */
-function getElSize(value, postfix, prefix) {
-    prefix = prefix || '';
-    if (util.isNumber(value)) {
-        return prefix + ':' + value + postfix;
-    }
-
-    return prefix + ':auto';
-}
-
-/**
- * Get element left based on narrowWeekend
- * @param {object} viewModel - view model
- * @param {Array} grids - dates information
- * @returns {number} element left
- */
-function getElLeft(viewModel, grids) {
-    return grids[viewModel.left] ? grids[viewModel.left].left : 0;
-}
-
-/**
- * Get element width based on narrowWeekend
- * @param {object} viewModel - view model
- * @param {Array} grids - dates information
- * @returns {number} element width
- */
-function getElWidth(viewModel, grids) {
-    var width = 0;
-    var i = 0;
-    var length = grids.length;
-    var left;
-    for (; i < viewModel.width; i += 1) {
-        left = (viewModel.left + i) % length;
-        left += parseInt((viewModel.left + i) / length, 10);
-        if (left < length) {
-            width += grids[left] ? grids[left].width : 0;
-        }
-    }
-
-    return width;
-}
-
-Handlebars.registerHelper({
+var helpers = {
     /**
      * Stamp supplied object
      *
@@ -355,15 +306,15 @@ Handlebars.registerHelper({
         return '';
     },
 
+    'monthDayname-tmpl': function(model) {
+        return model.label;
+    },
+
     'weekDayname-tmpl': function(model) {
         var classDate = config.classname('dayname-date');
         var className = config.classname('dayname-name');
 
         return '<span class="' + classDate + '">' + model.date + '</span>&nbsp;&nbsp;<span class="' + className + '">' + model.dayName + '</span>';
-    },
-
-    'monthDayname-tmpl': function(model) {
-        return model.label;
     },
 
     'weekGridFooterExceed-tmpl': function(hiddenSchedules) {
@@ -393,6 +344,51 @@ Handlebars.registerHelper({
         var closeIconName = config.classname('ic-arrow-solid-top');
 
         return '<span class="' + iconName + ' ' + closeIconName + '"></span>';
+    },
+
+    'timezoneDisplayLabel-tmpl': function(timezoneOffset, displayLabel) {
+        var gmt, hour, minutes;
+
+        if (util.isUndefined(displayLabel)) {
+            gmt = timezoneOffset < 0 ? '-' : '+';
+            hour = Math.abs(parseInt(timezoneOffset / SIXTY_MINUTES, 10));
+            minutes = Math.abs(timezoneOffset % SIXTY_MINUTES);
+            displayLabel = gmt + datetime.leadingZero(hour, 2) + ':' + datetime.leadingZero(minutes, 2);
+        }
+
+        return displayLabel;
+    },
+
+    'timegridDisplayPrimayTime-tmpl': function(time) {
+        /* TODO: 삭제 필요 (will be deprecated) */
+        return Handlebars.helpers['timegridDisplayPrimaryTime-tmpl'](time);
+    },
+
+    'timegridDisplayPrimaryTime-tmpl': function(time) {
+        var hour = time.hour;
+        var meridiem = hour >= 12 ? 'pm' : 'am';
+
+        if (hour > 12) {
+            hour = hour - 12;
+        }
+
+        return hour + ' ' + meridiem;
+    },
+
+    'timegridDisplayTime-tmpl': function(time) {
+        return datetime.leadingZero(time.hour, 2) + ':' + datetime.leadingZero(time.minutes, 2);
+    },
+
+    'timegridCurrentTime-tmpl': function(timezone) {
+        var templates = [];
+
+        if (timezone.dateDifference) {
+            templates.push('[' + timezone.dateDifferenceSign + timezone.dateDifference + ']<br>');
+        }
+
+        templates.push(datetime.format(timezone.hourmarker, 'HH:mm'));
+
+        return templates.join('');
     },
 
     'popupIsAllDay-tmpl': function() {
@@ -458,25 +454,55 @@ Handlebars.registerHelper({
     },
     'popupDelete-tmpl': function() {
         return 'Delete';
-    },
-    'timezoneDisplayLabel-tmpl': function(timezoneOffset, displayLabel) {
-        var gmt, hour, minutes;
-
-        if (util.isUndefined(displayLabel)) {
-            gmt = timezoneOffset < 0 ? '-' : '+';
-            hour = Math.abs(parseInt(timezoneOffset / SIXTY_MINUTES, 10));
-            minutes = Math.abs(timezoneOffset % SIXTY_MINUTES);
-            displayLabel = gmt + datetime.leadingZero(hour, 2) + ':' + datetime.leadingZero(minutes, 2);
-        }
-
-        return displayLabel;
-    },
-    'timegridDisplayPrimayTime-tmpl': function(time) {
-        var meridiem = time.hour < 12 ? 'am' : 'pm';
-
-        return time.hour + ' ' + meridiem;
-    },
-    'timegridDisplayTime-tmpl': function(time) {
-        return datetime.leadingZero(time.hour, 2) + ':' + datetime.leadingZero(time.minutes, 2);
     }
-});
+};
+
+/**
+ * Get CSS syntax for element size
+ * @param {number} value - size value to apply element
+ * @param {string} postfix - postfix string ex) px, em, %
+ * @param {string} prefix - property name ex) width, height
+ * @returns {string} CSS syntax
+ */
+function getElSize(value, postfix, prefix) {
+    prefix = prefix || '';
+    if (util.isNumber(value)) {
+        return prefix + ':' + value + postfix;
+    }
+
+    return prefix + ':auto';
+}
+
+/**
+ * Get element left based on narrowWeekend
+ * @param {object} viewModel - view model
+ * @param {Array} grids - dates information
+ * @returns {number} element left
+ */
+function getElLeft(viewModel, grids) {
+    return grids[viewModel.left] ? grids[viewModel.left].left : 0;
+}
+
+/**
+ * Get element width based on narrowWeekend
+ * @param {object} viewModel - view model
+ * @param {Array} grids - dates information
+ * @returns {number} element width
+ */
+function getElWidth(viewModel, grids) {
+    var width = 0;
+    var i = 0;
+    var length = grids.length;
+    var left;
+    for (; i < viewModel.width; i += 1) {
+        left = (viewModel.left + i) % length;
+        left += parseInt((viewModel.left + i) / length, 10);
+        if (left < length) {
+            width += grids[left] ? grids[left].width : 0;
+        }
+    }
+
+    return width;
+}
+
+Handlebars.registerHelper(helpers);

@@ -1,7 +1,7 @@
 /* eslint no-shadow: 0 */
 /**
  * @fileoverview Controller mixin modules for day views.
- * @author NHN Ent. FE Development Team <dl_javascript@nhnent.com>
+ * @author NHN FE Development Lab <dl_javascript@nhn.com>
  */
 'use strict';
 
@@ -212,6 +212,7 @@ var Week = {
      * @returns {function} - filtering function
      */
     _makeHourRangeFilter: function(hStart, hEnd) {
+        // eslint-disable-next-line complexity
         return function(schedule) {
             var ownHourStart = schedule.model.start;
             var ownHourEnd = schedule.model.end;
@@ -241,9 +242,12 @@ var Week = {
     _addMultiDatesInfo: function(vColl) {
         vColl.each(function(viewModel) {
             var model = viewModel.model;
+            var start = model.getStarts();
+            var end = model.getEnds();
+
             viewModel.hasMultiDates = true;
-            viewModel.renderStarts = datetime.start(model.getStarts());
-            viewModel.renderEnds = datetime.end(model.getEnds());
+            viewModel.renderStarts = datetime.start(start);
+            viewModel.renderEnds = datetime.renderEnd(start, end);
         });
     },
 
@@ -384,4 +388,3 @@ var Week = {
 };
 
 module.exports = Week;
-

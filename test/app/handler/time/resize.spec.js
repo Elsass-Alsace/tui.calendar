@@ -53,7 +53,7 @@ describe('TimeResize', function() {
                         start: new TZDate(2015, 4, 1, 9, 30),
                         end: new TZDate(2015, 4, 1, 10, 30),
                         duration: function() {
-                            return new TZDate(datetime.millisecondsFrom('hour', 1));
+                            return datetime.millisecondsFrom('hour', 1);
                         }
                     }
                 }
@@ -80,17 +80,19 @@ describe('TimeResize', function() {
 
             expect(mockInstance.fire).toHaveBeenCalledWith('beforeUpdateSchedule', {
                 schedule: baseControllerMock.schedules.items[20],
+                changes: {
+                    end: new TZDate(2015, 4, 1, 11)
+                },
                 start: new TZDate(2015, 4, 1, 9, 30),
                 end: new TZDate(2015, 4, 1, 11)
             });
         });
 
         it('can\'t update schedule duration less than 30 minutes.', function() {
-            var oneHour = datetime.millisecondsFrom('hour', 1);
             var scheduleData = {
                 targetModelID: 20,
                 // backward resize!
-                nearestRange: [oneHour, 0],
+                nearestRange: [new TZDate(2015, 4, 1, 9, 30), new TZDate(2015, 4, 1, 9, 30).addMinutes(-60)],
                 relatedView: {
                     getDate: function() {
                         return new TZDate(2015, 4, 1);
@@ -101,6 +103,9 @@ describe('TimeResize', function() {
 
             expect(mockInstance.fire).toHaveBeenCalledWith('beforeUpdateSchedule', {
                 schedule: baseControllerMock.schedules.items[20],
+                changes: {
+                    end: new TZDate(2015, 4, 1, 10)
+                },
                 start: new TZDate(2015, 4, 1, 9, 30),
                 end: new TZDate(2015, 4, 1, 10)
             });
@@ -121,6 +126,9 @@ describe('TimeResize', function() {
 
             expect(mockInstance.fire).toHaveBeenCalledWith('beforeUpdateSchedule', {
                 schedule: baseControllerMock.schedules.items[20],
+                changes: {
+                    end: new TZDate(2015, 4, 1, 23, 59, 59)
+                },
                 start: new TZDate(2015, 4, 1, 9, 30),
                 end: new TZDate(2015, 4, 1, 23, 59, 59)
             });
